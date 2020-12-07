@@ -43,9 +43,7 @@ import constant
 class CodeQualityChecker():
     """Load a Java source file, tokenize it, check coding style."""
 
-    def __init__(self, filename,
-
-                 ):
+    def __init__(self, filename):
         self.file = self.check_file(filename)
         self.max_line_length = constant.MAX_LINE_LENGTH
         self.tab_size = constant.TAB_SIZE
