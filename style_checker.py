@@ -1,4 +1,4 @@
-# Style checker for CSE 142
+# Style linter for Java programs
 import re
 import sys
 import json
