@@ -2,9 +2,10 @@
 import re
 import sys
 import json
+from style import style
 
 # Constant setup
-max_line_length = 100
+MAX_LINE_LENGTH = 100
 boolean_true = '(.*)==( *)true(.*)'
 boolean_false = '(.*)==( *)false(.*)'
 scanners = '(.*)new Scanner\(System\.in\)(.)*'
@@ -91,7 +92,7 @@ def lint_code(file: str):
 
         # Line length
         if check_length(line):
-            add_error(line_num, 'long_lines')
+            add_error(line_num, 'Long Lines')
 
         # Indentation
         if indent_level == 1 and num < len(file_list) - 1:
@@ -786,9 +787,9 @@ def check_while_if(line: str):
 
 def check_length(line: str):
     """
-    Checks if a line is longer than max_line_length (100 character)
+    Checks if a line is longer or equal to 100 characters
     """
-    return len(line) > max_line_length
+    return len(line) >= MAX_LINE_LENGTH - 1
 
 
 def check_indentation(line: str, indent_level: int, size: int, line_num: int, file_list):
