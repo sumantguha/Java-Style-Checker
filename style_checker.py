@@ -31,7 +31,7 @@ move_count = 0
 f_count = 0
 m_count = 0
 
-style = json.load(open('style.json'))
+# style = json.load(open('style.json'))
 
 # Checking correct usage of program
 if len(sys.argv) != 2:
