@@ -34,7 +34,7 @@ except ImportError:
 
 
 # Regex Setup
-BLANK_PRINTLNS = re.compile('System\.out\.println[\s]*\(""\)')
+BLANK_PRINTLNS = re.compile(r'System\.out\.println[\s]*\(""\)')
 
 
 _checks = {'visible': {}, 'private': {}}
@@ -57,7 +57,7 @@ def add_check(check, code=None):
 
     if inspect.isfunction(check):
         args = _get_parameters(check)
-        if args and args[0] in ('visible', 'hidden'):
+        if args and args[0] in ('visible', 'private'):
             if code is None:
                 code = ''
             _add_check(check, args[0], code, args)
@@ -66,15 +66,15 @@ def add_check(check, code=None):
 
 @add_check
 def check_blank_printlns(visible):
-    """
-    Check Blank Println statements
-    """
-
-    return 'Blank println statements', 'Your should say println() instead of println("")'
+    """check for println("") instead of println()"""
+    match = BLANK_PRINTLNS.search(visible)
+    if match:
+        return ('Blank println statements',
+                'Your should say println() instead of println("")')
 
 
 @add_check
-def check_long_lines(visible):
+def check_long_lines(private):
     """
     Checks long lines
     """
@@ -100,7 +100,7 @@ class CSE142Checker:
             verbose=self.verbose, total=self.total_lines)
         self.report_error = self.report.error
         self.visible = checks['visible']
-        self.private_checks = checks['private']
+        self.private = checks['private']
         self.noqa = False
 
     # TODO: Check if file exists
@@ -123,25 +123,36 @@ class CSE142Checker:
         return line
 
     def report_visible_results(self, line):
-        """Reports check results"""
-        for name, check, category in self.visible:
-            result = self.run_checks(check, category)
+        """Reports check results for visible tests"""
+        self.line = line
+        for name, check, _ in self.visible:
+            result = self.run_checks(check)
             if result is not None:
                 (info, message) = result
                 self.report_error(self.line_number, info, message, check)
 
-    def run_checks(self, check, category):
-        """Runs all checks for a category"""
-        categories = [getattr(self, name) for name in category]
-        return check(*categories)
+    def report_private_results(self, line):
+        """Reports check results for private tests"""
+        self.line = line
+        for name, check, _ in self.private:
+            result = self.run_checks(check)
+            if result is not None:
+                (info, message) = result
+                self.report_error(self.line_number, info, message, check)
 
-    def check_all(self, expected=None):
+    def run_checks(self, check):
+        """Runs all checks"""
+        return check(self.line)
+
+    def check_all(self, expected=None, mode='visible'):
         """ Run tests on file and return the the list of errors"""
         self.report.init_file(self.filename, expected)
         self.line_number = 0
         line = self.readline()
         while line:
             self.report_visible_results(line)
+            if mode == 'private':
+                self.report_private_results(line)
             line = self.readline()
 
         return self.report.present_file_results()
@@ -172,16 +183,12 @@ class CodeQualityChecker:
 
         checker = self.checker_class(
             filename, self.checks, options=self.options)
-        result = None
-        if self.mode == 'visible':
-            result = checker.check_visible(expected=expected)
-        elif self.mode == 'private':
-            result = checker.check_private(expected=expected)
-        elif self.mode == 'free':
-            result = checker.check_all(expected=expected)
-        else:
+
+        if self.mode != 'visible' and self.mode != 'private':
             raise InputError(
-                'Create Checker with mode either visible, private, or free')
+                'Create Checker with mode either visible or private')
+
+        result = checker.check_all(expected=expected, mode=self.mode)
 
         if not result:
             return '\tPassed!'
@@ -223,7 +230,7 @@ class GenerateReport:
         else:
             self.categories[info] = 1
             self.messages[info] = message
-            self.lines[info] = []
+            self.lines[info] = [line_num]
 
         self.file_errors += 1
 
@@ -246,8 +253,9 @@ class GenerateReport:
         """Prints out errors in a ordered fashion"""
         errors = ''
         for category, count in sorted(self.categories.items()):
+            phrase = 'line' if len(self.lines[category]) == 1 else 'lines'
             s = f"\t{category} on " + \
-                f"lines {str(self.lines[category]).replace('[', '{').replace(']', '}')}"
+                f"{phrase} {str(self.lines[category]).replace('[', '{').replace(']', '}')}"
             errors = ''.join([errors, s])
 
             if self.verbose:
@@ -299,5 +307,5 @@ class InputError(Error):
         self.message = message
 
 
-checker = CodeQualityChecker(mode='free', verbose=True)
+checker = CodeQualityChecker(mode='private', verbose=True)
 print(checker.run_tests('Test.java'))
