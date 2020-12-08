@@ -13,7 +13,10 @@ style.py and constant.py
 To instansiate CSE142Checker object run:
 checker = CSE142Checker(<path to file>)
 
-// TODO: Translate style.py into a class StyleGuide
+TODO: Make other modes work
+TODO: Add a style dictionary
+TODO: Write Tests
+TODO: Factor constants.py
 
 author: Omar, Sumant
 email: oibra@uw.edu, guhas2@uw.edu
@@ -75,7 +78,8 @@ def check_blank_printlns(visible):
     """
     Check Blank Println statements
     """
-    # return 'Blank println statements', 'Your should say println() instead of println("")'
+
+    return 'Blank println statements', 'Your should say println() instead of println("")'
 
 
 @add_check
@@ -83,21 +87,26 @@ def check_long_lines(visible):
     """
     Checks long lines
     """
-    # return 'Long Lines', 'Your lines should ideally cap out at 100 characters'
+    return 'Long Lines', 'Your lines should ideally cap out at 100 characters'
 
 
 # Code Quality Checking
 class CSE142Checker:
     """Load a Java source file, tokenize it, check coding style."""
 
-    def __init__(self, filename, checks):
+    def __init__(self, filename, checks, options=None, **kwargs):
+        if options is None:
+            options = CodeQualityChecker(kwargs).options
+        else:
+            assert not kwargs
         self.check_file(filename)
-        self.max_line_length = constant.MAX_LINE_LENGTH
-        self.tab_size = constant.TAB_SIZE
-        self.verbose = constant.VERBOSE
+        self.max_line_length = options["MAX_LINE_LENGTH"]
+        self.tab_size = options["TAB_SIZE"]
+        self.verbose = options["VERBOSE"]
         self.lines = readlines(filename)
         self.total_lines = len(self.lines)
-        self.report = GenerateReport(verbose=True, total=self.total_lines)
+        self.report = GenerateReport(
+            verbose=self.verbose, total=self.total_lines)
         self.report_error = self.report.error
         self.visible = checks['visible']
         self.private_checks = checks['private']
@@ -153,29 +162,39 @@ class CodeQualityChecker:
 
     def __init__(self, *args, **kwargs):
         self.checker_class = CSE142Checker
-        self.verbose = kwargs.pop('verbose', True)
-        self.report = GenerateReport(verbose=True)
+        self.verbose = kwargs.pop('verbose', False)
+        self.report = GenerateReport(verbose=self.verbose)
         self.mode = kwargs.pop('mode', 'visible')
         self.checks = {
             'visible': self.get_checks('visible'),
             'private': self.get_checks('private')
         }
+        self.options = {
+            "MAX_LINE_LENGTH": 100,
+            "TAB_SIZE": 4,
+            "VERBOSE": self.verbose
+        }
 
     def run_tests(self, filename, expected=None):
         """Run all checks on a java source file"""
-        if self.verbose:
-            print(f'Checking {filename}: ')
+        print(f'Checking {filename}: ')
 
-        checker = self.checker_class(filename, self.checks)
+        checker = self.checker_class(
+            filename, self.checks, options=self.options)
+        result = None
         if self.mode == 'visible':
-            return checker.check_visible(expected=expected)
+            result = checker.check_visible(expected=expected)
         elif self.mode == 'private':
-            return checker.check_private(expected=expected)
+            result = checker.check_private(expected=expected)
         elif self.mode == 'free':
-            return checker.check_all(expected=expected)
+            result = checker.check_all(expected=expected)
         else:
             raise InputError(
                 'Create Checker with mode either visible, private, or free')
+
+        if not result:
+            return '\tPassed!'
+        return result
 
     def get_checks(self, category):
         """Get all the checks for a category"""
@@ -234,7 +253,6 @@ class GenerateReport:
 
     def present_file_results(self):
         """Prints out errors in a ordered fashion"""
-        label = self.filename
         errors = ''
         for category, count in sorted(self.categories.items()):
             s = f"\t{category} on " + \
