@@ -16,7 +16,6 @@ checker = CSE142Checker(<path to file>)
 TODO: Make other modes work
 TODO: Add a style dictionary
 TODO: Write Tests
-TODO: Factor constants.py
 
 author: Omar, Sumant
 email: oibra@uw.edu, guhas2@uw.edu
@@ -26,20 +25,12 @@ import sys
 import inspect
 import tokenize
 
-try:
-    from functools import lru_cache
-except ImportError:
-    def lru_cache(maxsize=128):
-        return lambda function: function
 
 try:
     from configparser import RawConfigParser
     from io import TextIOWrapper
 except ImportError:
     pass
-
-# Local Constant Setup
-import constant
 
 
 # Regex Setup
