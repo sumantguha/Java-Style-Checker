@@ -18,6 +18,7 @@ TODO: Write Tests
 Features to add:
 * long line checking for line with comments at the end
 * checking in_class or not
+* BufferedFileReader, FileReader, FileWriter...
 
 author: Omar, Sumant
 email: oibra@uw.edu, guhas2@uw.edu
@@ -29,21 +30,30 @@ import inspect
 import tokenize
 from configparser import RawConfigParser
 from io import TextIOWrapper
+from contextlib import contextmanager
+
+# Global Setup
+NUM_CONSOLE_SCANNER = 0
+NUM_RANDOM = 0
 
 # Regex Setup
 BLANK_PRINTLNS = re.compile(r'System\.out\.println[\s]*\(""\)')
 BOOLEAN_TRUE = re.compile(r'(.*)==( *)true(.*)')
 BOOLEAN_FALSE = re.compile(r'(.*)==( *)false(.*)')
+BREAK = re.compile(r'break.*;')
+CONTINUE = re.compile(r'continue.*;')
+CATCH = re.compile(r'catch.*{')
+VAR = re.compile(r'var.*;')
+TO_ARRAY = re.compile(r'\.toArray.*')
+STRING_BUILDER = re.compile(r'StringBuilder.*')
+STRING_BUFFER = re.compile(r'StringBuffer')
+STRING_JOINER = re.compile(r'StringJoiner')
+STRING_TOKENIZER = re.compile(r'StringTokenizer')
+TO_CHAR_ARRAY = re.compile(r'\.toCharArray.*')
+CONSOLE_SCANNER = re.compile(r'.*new.*Scanner.*\(.*System.*\.in.*\).*')
+RANDOM = re.compile(r'.*new.*Random.*\(.*\).*')
 
 _checks = {'visible': {}, 'private': {}}
-
-
-def exception_handler(exception_type, exception, tb):
-    traceback.print_tb(tb)
-    print(f"\n{exception_type.__name__}: {exception}")
-
-
-sys.excepthook = exception_handler
 
 
 def _get_parameters(function):
@@ -78,9 +88,8 @@ def check_blank_printlns(visible):
     if match:
         try:
             return (key, BANK[key])
-        except KeyError as e:
-            raise SearchError(
-                '(TA Note) This test probably broke, post on the message board')
+        except Exception as e:
+            exit_on_error(e)
 
 
 @add_check
@@ -90,25 +99,178 @@ def check_long_lines(visible, max_line_length):
     if len(visible) >= max_line_length - 1:
         try:
             return (key, BANK[key])
-        except KeyError as e:
-            raise SearchError(
-                '(TA Note) This test probably broke, post on the message board')
+        except Exception as e:
+            exit_on_error(e)
+
+
+@add_check
+def check_consolescanner(visible):
+    """checks for new Scanner(System.in)"""
+    global NUM_CONSOLE_SCANNER
+    match = CONSOLE_SCANNER.search(visible)
+    key = 'Multiple console scanners'
+    if match:
+        NUM_CONSOLE_SCANNER += 1
+        if NUM_CONSOLE_SCANNER == 2:
+            try:
+                return (key, BANK[key])
+            except Exception as e:
+                exit_on_error(e)
+
+
+@add_check
+def check_random(visible):
+    """checks for new Random()"""
+    global NUM_RANDOM
+    match = RANDOM.search(visible)
+    key = 'Multiple random objects'
+    if match:
+        NUM_RANDOM += 1
+        if NUM_RANDOM == 2:
+            try:
+                return (key, BANK[key])
+            except Exception as e:
+                exit_on_error(e)
 
 
 @add_check
 def check_bad_boolean_zen(visible):
     """checks if boolean zen is good"""
     match_true = BOOLEAN_TRUE.search(visible)
+    key = 'Bad boolean zen ( == true)'
     if match_true:
-        return ('Bad boolean zen (== true)',
-                'You should never test booleans for equality, ' +
-                'you should just use x itself as a condition')
+        try:
+            return (key, BANK[key])
+        except Exception as e:
+            exit_on_error(e)
 
     match_false = BOOLEAN_FALSE.search(visible)
+    key = 'Bad boolean zen ( == false)'
     if match_false:
-        return ('Bad boolean zen (== false)',
-                'You should never test booleans for equality, ' +
-                'you should just use !x itself as a condition')
+        try:
+            return (key, BANK[key])
+        except Exception as e:
+            exit_on_error(e)
+
+
+@add_check
+def check_break(visible):
+    """checks for break"""
+    match = BREAK.search(visible)
+    key = '[FORBIDDEN] Break'
+    if match:
+        try:
+            return (key, BANK[key])
+        except Exception as e:
+            exit_on_error(e)
+
+
+@add_check
+def check_continue(visible):
+    """checks for continue"""
+    match = CONTINUE.search(visible)
+    key = '[FORBIDDEN] Continue'
+    if match:
+        try:
+            return (key, BANK[key])
+        except Exception as e:
+            exit_on_error(e)
+
+
+@add_check
+def check_try_catch(visible):
+    """checks for try/catch statements"""
+    match = CATCH.search(visible)
+    key = '[FORBIDDEN] Try/Catch'
+    if match:
+        try:
+            return (key, BANK[key])
+        except Exception as e:
+            exit_on_error(e)
+
+
+@add_check
+def check_var(visible):
+    """checks for var statements"""
+    match = VAR.search(visible)
+    key = '[FORBIDDEN] Var'
+    if match:
+        try:
+            return (key, BANK[key])
+        except Exception as e:
+            exit_on_error(e)
+
+
+@add_check
+def check_toarray(visible):
+    """checks for .toArray statements"""
+    match = TO_ARRAY.search(visible)
+    key = '[FORBIDDEN] .toArray'
+    if match:
+        try:
+            return (key, BANK[key])
+        except Exception as e:
+            exit_on_error(e)
+
+
+@add_check
+def check_stringbuilder(visible):
+    """checks for StringBuilder declerations"""
+    match = STRING_BUILDER.search(visible)
+    key = '[FORBIDDEN] StringBuilder'
+    if match:
+        try:
+            return (key, BANK[key])
+        except Exception as e:
+            exit_on_error(e)
+
+
+@add_check
+def check_stringbuffer(visible):
+    """checks for StringBuffer declerations"""
+    match = STRING_BUFFER.search(visible)
+    key = '[FORBIDDEN] StringBuffer'
+    if match:
+        try:
+            return (key, BANK[key])
+        except Exception as e:
+            exit_on_error(e)
+
+
+@add_check
+def check_stringjoiner(visible):
+    """checks for StringJoiner declerations"""
+    match = STRING_JOINER.search(visible)
+    key = '[FORBIDDEN] StringJoiner'
+    if match:
+        try:
+            return (key, BANK[key])
+        except Exception as e:
+            exit_on_error(e)
+
+
+@add_check
+def check_stringtokenizer(visible):
+    """checks for StringTokenizer declerations"""
+    match = STRING_TOKENIZER.search(visible)
+    key = '[FORBIDDEN] StringTokenizer'
+    if match:
+        try:
+            return (key, BANK[key])
+        except Exception as e:
+            exit_on_error(e)
+
+
+@add_check
+def check_tochararray(visible):
+    """checks for .toCharArray() calls"""
+    match = TO_CHAR_ARRAY.search(visible)
+    key = '[FORBIDDEN] .toCharArray'
+    if match:
+        try:
+            return (key, BANK[key])
+        except Exception as e:
+            exit_on_error(e)
 
 
 # Code Quality Checking
@@ -178,7 +340,6 @@ class CSE142Checker:
     def handle_comments(self, line):
         if line.strip().startswith('//'):
             self.single_comment = True
-            line = self.readline()
             return ''
         elif '//' in line:
             idx = line.index('//')
@@ -211,6 +372,7 @@ class CSE142Checker:
         self.line_number = 0
         line = self.readline()
         while line:
+            self.single_comment = False
             line = self.handle_comments(line)
 
             if not self.single_comment and not self.multi_comment:
@@ -232,7 +394,7 @@ class CodeQualityChecker:
         self.mode = kwargs.pop('mode', 'visible')
         self.checks = {
             'visible': self.get_checks('visible'),
-            'private': self.get_checks('private')
+            'private': self.get_checks('private'),
         }
         self.options = {
             "MAX_LINE_LENGTH": 100,
@@ -263,7 +425,7 @@ class CodeQualityChecker:
         for check, attrs in _checks[category].items():
             (codes, args) = attrs
             checks.append((check.__name__, check, args))
-        return sorted(checks)
+        return checks
 
 
 # Reporting Code Quality Errors
@@ -305,7 +467,7 @@ class GenerateReport:
         """Report statics of all errors"""
         return [
             f'Error {key} occured {self.categories[key]} times'
-            for key in sorted(self.messages)
+            for key in self.messages
         ]
 
     def get_unique(self):
@@ -316,14 +478,40 @@ class GenerateReport:
         """Prints out errors in a ordered fashion"""
         errors = ''
         index = 1
-        for category, count in sorted(self.categories.items()):
+        forbidden = []
+        other = []
+        for item in self.categories.items():
+            if item[0].startswith('[FORBIDDEN'):
+                forbidden.append(item)
+            else:
+                other.append(item)
+        forbidden.sort(key=lambda x: x[1], reverse=True)
+        other.sort(key=lambda x: x[1], reverse=True)
+        total = forbidden + other
+        for category, count in total:
+            multiple_scanners = category.startswith(
+                'Multiple console scanners')
+            multiple_random = category.startswith('Multiple random objects')
+
             phrase = 'line' if len(self.lines[category]) == 1 else 'lines'
-            s = f"\t{index}) {category} on " + \
-                f"{phrase} {str(self.lines[category]).replace('[', '{').replace(']', '}')}"
+
+            linenum = str(self.lines[category]).replace(
+                '[', '{').replace(']', '}')
+
+            if multiple_scanners or multiple_random:
+                linenum = ''
+
+            s = f"\t{index}) {category} on " + f"{phrase} {linenum}"
+
             errors = ''.join([errors, s])
 
             if self.verbose:
-                errors = ''.join([errors, f' [Total Count = {count}]\n'])
+                if multiple_scanners:
+                    count = NUM_CONSOLE_SCANNER
+                elif multiple_random:
+                    count = NUM_RANDOM
+                errors = ''.join(
+                    [errors, f' [Total Count = {count}]\n'])
                 message = f"\tTA Note: {self.messages[category]}\n"
                 errors = ''.join([errors, message])
             errors += '\n'
@@ -337,6 +525,8 @@ class GenerateReport:
             errors = ''.join([errors, f'\tTotal Errors: {self.get_count()}\n'])
             errors = ''.join(
                 [errors, f'\tUnique Errors: {self.get_unique()}\n'])
+            errors = ''.join(
+                [errors, f'\tForbidden Features: {len(forbidden)}\n'])
 
         return errors
 
@@ -364,7 +554,53 @@ BANK = {
     'Blank println statements': 'A blank println should actually be blank. \n' +
     '\tYou should always print a blank line using System.out.println(). Printing \n' +
     '\tan empty String with System.out.println("") is considered bad style; it makes\n' +
-    '\tthe intention less clear.'
+    '\tthe intention less clear.',
+
+    'Bad boolean zen ( == true) ': 'You should never test booleans for equality, \n' +
+    '\tyou should just use x itself as a condition',
+
+    'Bad boolean zen ( == false)': 'You should never test booleans for equality, \n' +
+    '\tyou should just use !x itself as a condition',
+
+    'Multiple console scanners': 'There should be one Scanner per source. It\'s best\n' +
+    '\tpractice to only have one Scanner',
+
+    'Multiple random objects': 'There should be one Random per file. It\'s best practice\n' +
+    '\tto only have one Random object created, and pass that Random around to anywhere that\n' +
+    '\tneeds it.',
+
+    '[FORBIDDEN] Break': 'Break is a *forbidden* feature. You are not allowed to use it in \n' +
+    '\tCSE14x. Considering exiting a loop with a different conditional structure',
+
+    '[FORBIDDEN] Continue': 'Continue is a *forbidden* feature. You are not allowed to use \n' +
+    '\tit in CSE14x. Considering using a different conditional structure',
+
+    '[FORBIDDEN] Try/Catch': 'Try/Catch is a *forbidden* feature. You are not allowed \n' +
+    '\tto use it in CSE14x. Consider throwing Exceptions instead',
+
+    '[FORBIDDEN] Var': 'Var is a *forbidden* feature. You are not allowed \n' +
+    '\tto use it in CSE14x. Declare typed variables instead',
+
+    '[FORBIDDEN] .toArray': '.toArray is a *forbidden* feature. You are not allowed \n' +
+    '\tto use it in CSE14x. Convert to arrays manually',
+
+    '[FORBIDDEN] StringBuilder': 'StringBuilder is a *forbidden* feature. You are \n' +
+    '\tnot allowed  to use it in CSE14x. Consider using String concatenation',
+
+    '[FORBIDDEN] StringBuffer': 'StringBuffer is a *forbidden* feature. You are \n' +
+    '\tnot allowed  to use it in CSE14x. Consider using simple immutable String',
+
+    '[FORBIDDEN] StringJoiner': 'StringJoiner is a *forbidden* feature. You are \n' +
+    '\tnot allowed  to use it in CSE14x. Consider using String concatenation',
+
+    '[FORBIDDEN] StringTokenizer': 'StringJoiner is a *forbidden* feature. You are \n' +
+    '\tnot allowed  to use it in CSE14x. Not sure why you are using this in 142 :)',
+
+    '[FORBIDDEN] .toCharArray': '.toCharArray is a *forbidden* feature. You are \n' +
+    '\tnot allowed  to use it in CSE14x. You should build up arrays manually _if_ necessary',
+
+    '[FORBIDDEN] .toCharArray': '.toCharArray is a *forbidden* feature. You are \n' +
+    '\tnot allowed  to use it in CSE14x. You should build up arrays manually _if_ necessary',
 }
 
 
@@ -385,18 +621,16 @@ class InputError(Error):
         self.message = message
 
 
-class SearchError(Error):
-    """Exception raised for errors in the annotations search
-
-    Attributes:
-        message -- explanation of the error
-    """
-
-    def __init__(self, message):
-        self.message = message
-
-    def __repr__(self):
-        print(self.message)
+def exit_on_error(e):
+    """Exits program on error"""
+    import os
+    exc_type, exc_obj, exc_tb = sys.exc_info()
+    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    sys.exit(
+        f"""\n\tGot a {exc_type.__name__} in file {fname} on line {exc_tb.tb_lineno}
+        because of searching {str(e)}.\n
+        (TA Note) This test probably broke, post on the message board :(
+        Terminating program...\n""")
 
 
 def main():
