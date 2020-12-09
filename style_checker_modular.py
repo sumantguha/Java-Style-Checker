@@ -20,8 +20,8 @@ Features to add:
 * checking in_class or not
 * BufferedFileReader, FileReader, FileWriter...
 
-author: Omar, Sumant
-email: oibra@uw.edu, guhas2@uw.edu
+authors: Omar, Sumant
+emails: oibra@uw.edu, guhas2@uw.edu
 """
 import re
 import sys
@@ -30,7 +30,6 @@ import inspect
 import tokenize
 from configparser import RawConfigParser
 from io import TextIOWrapper
-from contextlib import contextmanager
 
 # Global Setup
 NUM_CONSOLE_SCANNER = 0
@@ -52,6 +51,7 @@ STRING_TOKENIZER = re.compile(r'StringTokenizer')
 TO_CHAR_ARRAY = re.compile(r'\.toCharArray.*')
 CONSOLE_SCANNER = re.compile(r'.*new.*Scanner.*\(.*System.*\.in.*\).*')
 RANDOM = re.compile(r'.*new.*Random.*\(.*\).*')
+FILE_READER = re.compile(r'FileReader')
 
 _checks = {'visible': {}, 'private': {}}
 
@@ -86,10 +86,7 @@ def check_blank_printlns(visible):
     match = BLANK_PRINTLNS.search(visible)
     key = 'Blank println statements'
     if match:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
 
 @add_check
@@ -97,40 +94,31 @@ def check_long_lines(visible, max_line_length):
     """checks if line is longer than max_line_length"""
     key = 'Long lines'
     if len(visible) >= max_line_length - 1:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
 
 @add_check
-def check_consolescanner(visible):
+def check_consolescanner(private):
     """checks for new Scanner(System.in)"""
     global NUM_CONSOLE_SCANNER
-    match = CONSOLE_SCANNER.search(visible)
+    match = CONSOLE_SCANNER.search(private)
     key = 'Multiple console scanners'
     if match:
         NUM_CONSOLE_SCANNER += 1
         if NUM_CONSOLE_SCANNER == 2:
-            try:
-                return (key, BANK[key])
-            except Exception as e:
-                exit_on_error(e)
+            return (key, BANK[key])
 
 
 @add_check
-def check_random(visible):
+def check_random(private):
     """checks for new Random()"""
     global NUM_RANDOM
-    match = RANDOM.search(visible)
+    match = RANDOM.search(private)
     key = 'Multiple random objects'
     if match:
         NUM_RANDOM += 1
         if NUM_RANDOM == 2:
-            try:
-                return (key, BANK[key])
-            except Exception as e:
-                exit_on_error(e)
+            return (key, BANK[key])
 
 
 @add_check
@@ -139,18 +127,12 @@ def check_bad_boolean_zen(visible):
     match_true = BOOLEAN_TRUE.search(visible)
     key = 'Bad boolean zen ( == true)'
     if match_true:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
     match_false = BOOLEAN_FALSE.search(visible)
     key = 'Bad boolean zen ( == false)'
     if match_false:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
 
 @add_check
@@ -159,10 +141,7 @@ def check_break(visible):
     match = BREAK.search(visible)
     key = '[FORBIDDEN] Break'
     if match:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
 
 @add_check
@@ -171,10 +150,7 @@ def check_continue(visible):
     match = CONTINUE.search(visible)
     key = '[FORBIDDEN] Continue'
     if match:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
 
 @add_check
@@ -183,10 +159,7 @@ def check_try_catch(visible):
     match = CATCH.search(visible)
     key = '[FORBIDDEN] Try/Catch'
     if match:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
 
 @add_check
@@ -195,10 +168,7 @@ def check_var(visible):
     match = VAR.search(visible)
     key = '[FORBIDDEN] Var'
     if match:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
 
 @add_check
@@ -207,10 +177,7 @@ def check_toarray(visible):
     match = TO_ARRAY.search(visible)
     key = '[FORBIDDEN] .toArray'
     if match:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
 
 @add_check
@@ -219,10 +186,7 @@ def check_stringbuilder(visible):
     match = STRING_BUILDER.search(visible)
     key = '[FORBIDDEN] StringBuilder'
     if match:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
 
 @add_check
@@ -231,10 +195,7 @@ def check_stringbuffer(visible):
     match = STRING_BUFFER.search(visible)
     key = '[FORBIDDEN] StringBuffer'
     if match:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
 
 @add_check
@@ -243,10 +204,7 @@ def check_stringjoiner(visible):
     match = STRING_JOINER.search(visible)
     key = '[FORBIDDEN] StringJoiner'
     if match:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
 
 @add_check
@@ -255,10 +213,7 @@ def check_stringtokenizer(visible):
     match = STRING_TOKENIZER.search(visible)
     key = '[FORBIDDEN] StringTokenizer'
     if match:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
 
 
 @add_check
@@ -267,10 +222,16 @@ def check_tochararray(visible):
     match = TO_CHAR_ARRAY.search(visible)
     key = '[FORBIDDEN] .toCharArray'
     if match:
-        try:
-            return (key, BANK[key])
-        except Exception as e:
-            exit_on_error(e)
+        return (key, BANK[key])
+
+
+@add_check
+def check_filereader(visible):
+    """checks for FileReader()"""
+    match = FILE_READER.search(visible)
+    key = '[FORBIDDEN] FileReader'
+    if match:
+        return (key, BANK[key])
 
 
 # Code Quality Checking
@@ -299,10 +260,10 @@ class CSE142Checker:
     def check_file(self, filename):
         """Checks valdity of input file"""
         if not isinstance(filename, str):
-            raise InputError('Usage: python style_checker.py [CLASS_NAME]')
+            sys.exit('Usage: python style_checker.py [CLASS_NAME]')
 
         if filename[-5:] != '.java':
-            raise InputError('File extension should be .java')
+            sys.exit('Files should be .java files')
 
         self.filename = filename
 
@@ -410,7 +371,7 @@ class CodeQualityChecker:
             filename, self.checks, options=self.options)
 
         if self.mode != 'visible' and self.mode != 'private':
-            raise InputError(
+            sys.exit(
                 'Create Checker with mode either visible or private')
 
         result = checker.check_all(expected=expected, mode=self.mode)
@@ -601,42 +562,33 @@ BANK = {
 
     '[FORBIDDEN] .toCharArray': '.toCharArray is a *forbidden* feature. You are \n' +
     '\tnot allowed  to use it in CSE14x. You should build up arrays manually _if_ necessary',
+
+    '[FORBIDDEN] FileReader': 'FileReader is a *forbidden* feature. You are \n' +
+    '\tnot allowed  to use it in CSE14x. You should use Scanners to read file input',
 }
 
 
 # Error Handling
-class Error(Exception):
-    """Base case for exceptions"""
-    pass
-
-
-class InputError(Error):
-    """Exception raised for errors in the input
-
-    Attributes:
-        message -- explanation of the error
-    """
-
-    def __init__(self, message):
-        self.message = message
-
-
-def exit_on_error(e):
+def exit_on_error(exctype, value, tb):
     """Exits program on error"""
     import os
-    exc_type, exc_obj, exc_tb = sys.exc_info()
-    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    fname = os.path.split(tb.tb_frame.f_code.co_filename)[1]
+    obj = traceback.extract_tb(tb)
+    obj.reverse()
+    line_num = obj[0].lineno
+    line = obj[0].line
     sys.exit(
-        f"""\n\tGot a {exc_type.__name__} in file {fname} on line {exc_tb.tb_lineno}
-        because of searching {str(e)}.\n
-        (TA Note) This test probably broke, post on the message board :(
+        f"""\n\tGot a {exctype.__name__} in file {fname} on line {line_num}
+        because of line: \n \t\t{line}\n
+        (TA Note) This test probably broke :( post on the message board 
         Terminating program...\n""")
+
+
+sys.excepthook = exit_on_error
 
 
 def main():
     checker = CodeQualityChecker(mode='private', verbose=True)
-    if len(sys.argv) != 2:
-        raise InputError('Usage: python style_checker.py [CLASS_NAME]')
     print(checker.run_tests(sys.argv[1]))
 
 
