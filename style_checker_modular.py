@@ -30,6 +30,11 @@ import inspect
 import tokenize
 from configparser import RawConfigParser
 from io import TextIOWrapper
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.syntax import Syntax
+
+console = Console()
 
 # Global Setup
 NUM_CONSOLE_SCANNER = 0
@@ -52,6 +57,8 @@ TO_CHAR_ARRAY = re.compile(r'\.toCharArray.*')
 CONSOLE_SCANNER = re.compile(r'.*new.*Scanner.*\(.*System.*\.in.*\).*')
 RANDOM = re.compile(r'.*new.*Random.*\(.*\).*')
 FILE_READER = re.compile(r'FileReader')
+FILE_WRITER = re.compile(r'FileWriter')
+BUFFERED_REAFER = re.compile(r'BufferedReader')
 
 _checks = {'visible': {}, 'private': {}}
 
@@ -86,7 +93,7 @@ def check_blank_printlns(visible):
     match = BLANK_PRINTLNS.search(visible)
     key = 'Blank println statements'
     if match:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
@@ -94,31 +101,31 @@ def check_long_lines(visible, max_line_length):
     """checks if line is longer than max_line_length"""
     key = 'Long lines'
     if len(visible) >= max_line_length - 1:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
-def check_consolescanner(private):
+def check_consolescanner(visible):
     """checks for new Scanner(System.in)"""
     global NUM_CONSOLE_SCANNER
-    match = CONSOLE_SCANNER.search(private)
+    match = CONSOLE_SCANNER.search(visible)
     key = 'Multiple console scanners'
     if match:
         NUM_CONSOLE_SCANNER += 1
         if NUM_CONSOLE_SCANNER == 2:
-            return (key, BANK[key])
+            return [key, BANK[key]]
 
 
 @add_check
-def check_random(private):
+def check_random(visible):
     """checks for new Random()"""
     global NUM_RANDOM
-    match = RANDOM.search(private)
+    match = RANDOM.search(visible)
     key = 'Multiple random objects'
     if match:
         NUM_RANDOM += 1
         if NUM_RANDOM == 2:
-            return (key, BANK[key])
+            return [key, BANK[key]]
 
 
 @add_check
@@ -132,7 +139,7 @@ def check_bad_boolean_zen(visible):
     match_false = BOOLEAN_FALSE.search(visible)
     key = 'Bad boolean zen ( == false)'
     if match_false:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
@@ -141,7 +148,7 @@ def check_break(visible):
     match = BREAK.search(visible)
     key = '[FORBIDDEN] Break'
     if match:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
@@ -150,7 +157,7 @@ def check_continue(visible):
     match = CONTINUE.search(visible)
     key = '[FORBIDDEN] Continue'
     if match:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
@@ -159,7 +166,7 @@ def check_try_catch(visible):
     match = CATCH.search(visible)
     key = '[FORBIDDEN] Try/Catch'
     if match:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
@@ -168,7 +175,7 @@ def check_var(visible):
     match = VAR.search(visible)
     key = '[FORBIDDEN] Var'
     if match:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
@@ -177,7 +184,7 @@ def check_toarray(visible):
     match = TO_ARRAY.search(visible)
     key = '[FORBIDDEN] .toArray'
     if match:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
@@ -186,7 +193,7 @@ def check_stringbuilder(visible):
     match = STRING_BUILDER.search(visible)
     key = '[FORBIDDEN] StringBuilder'
     if match:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
@@ -195,7 +202,7 @@ def check_stringbuffer(visible):
     match = STRING_BUFFER.search(visible)
     key = '[FORBIDDEN] StringBuffer'
     if match:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
@@ -204,7 +211,7 @@ def check_stringjoiner(visible):
     match = STRING_JOINER.search(visible)
     key = '[FORBIDDEN] StringJoiner'
     if match:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
@@ -213,7 +220,7 @@ def check_stringtokenizer(visible):
     match = STRING_TOKENIZER.search(visible)
     key = '[FORBIDDEN] StringTokenizer'
     if match:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
@@ -222,7 +229,7 @@ def check_tochararray(visible):
     match = TO_CHAR_ARRAY.search(visible)
     key = '[FORBIDDEN] .toCharArray'
     if match:
-        return (key, BANK[key])
+        return [key, BANK[key]]
 
 
 @add_check
@@ -231,7 +238,25 @@ def check_filereader(visible):
     match = FILE_READER.search(visible)
     key = '[FORBIDDEN] FileReader'
     if match:
-        return (key, BANK[key])
+        return [key, BANK[key]]
+
+
+@add_check
+def check_filewriter(visible):
+    """checks for FileWriter()"""
+    match = FILE_WRITER.search(visible)
+    key = '[FORBIDDEN] FileWriter'
+    if match:
+        return [key, BANK[key]]
+
+
+@add_check
+def check_bufferedreader(visible):
+    """checks for BufferedReader()"""
+    match = BUFFERED_REAFER.search(visible)
+    key = '[FORBIDDEN] BufferedReader'
+    if match:
+        return [key, BANK[key]]
 
 
 # Code Quality Checking
@@ -365,7 +390,8 @@ class CodeQualityChecker:
 
     def run_tests(self, filename, expected=None):
         """Run all checks on a java source file"""
-        print(f'Checking {filename}: ')
+        console.print(
+            f'[bold blue]Checking {filename}[/bold blue]... \n')
 
         checker = self.checker_class(
             filename, self.checks, options=self.options)
@@ -442,7 +468,7 @@ class GenerateReport:
         forbidden = []
         other = []
         for item in self.categories.items():
-            if item[0].startswith('[FORBIDDEN'):
+            if item[0].startswith('[FORBIDDEN]'):
                 forbidden.append(item)
             else:
                 other.append(item)
@@ -462,7 +488,12 @@ class GenerateReport:
             if multiple_scanners or multiple_random:
                 linenum = ''
 
-            s = f"\t{index}) {category} on " + f"{phrase} {linenum}"
+            if category.startswith('[FORBIDDEN]'):
+                s = f"\t{index}. [bold red]{category}[/bold red] on " + \
+                    f"{phrase} {linenum}"
+            else:
+                s = f"\t{index}. [bold yellow]{category}[/bold yellow] on " + \
+                    f"{phrase} {linenum}"
 
             errors = ''.join([errors, s])
 
@@ -479,7 +510,7 @@ class GenerateReport:
             index += 1
 
         if self.verbose and errors:
-            errors += 'Statistics: \n'
+            errors += '[bold blue]Statistics:[/bold blue] \n'
             if self.total:
                 errors = ''.join(
                     [errors, f'\tTotal Lines Checked: {self.total}\n'])
@@ -509,7 +540,7 @@ def readlines(filename):
 # Annotation Bank
 BANK = {
     'Long lines': 'Lines of code should ideally max out at 80 characters, \n' +
-    '\tand should never exceed 100 characters in length. Lines that \n' +
+    '\tand should [italic]never[/italic] exceed 100 characters in length. Lines that \n' +
     '\tare too long should be broken up and wrapped to the next line.',
 
     'Blank println statements': 'A blank println should actually be blank. \n' +
@@ -546,25 +577,29 @@ BANK = {
     '\tto use it in CSE14x. Convert to arrays manually',
 
     '[FORBIDDEN] StringBuilder': 'StringBuilder is a *forbidden* feature. You are \n' +
-    '\tnot allowed  to use it in CSE14x. Consider using String concatenation',
+    '\tnot allowed to use it in CSE14x. Consider using String concatenation',
 
     '[FORBIDDEN] StringBuffer': 'StringBuffer is a *forbidden* feature. You are \n' +
-    '\tnot allowed  to use it in CSE14x. Consider using simple immutable String',
+    '\tnot allowed to use it in CSE14x. Consider using simple immutable String',
 
     '[FORBIDDEN] StringJoiner': 'StringJoiner is a *forbidden* feature. You are \n' +
-    '\tnot allowed  to use it in CSE14x. Consider using String concatenation',
+    '\tnot allowed to use it in CSE14x. Consider using String concatenation',
 
     '[FORBIDDEN] StringTokenizer': 'StringJoiner is a *forbidden* feature. You are \n' +
-    '\tnot allowed  to use it in CSE14x. Not sure why you are using this in 142 :)',
+    '\tnot allowed to use it in CSE14x. Not sure why you are using this in 142 :)',
 
     '[FORBIDDEN] .toCharArray': '.toCharArray is a *forbidden* feature. You are \n' +
-    '\tnot allowed  to use it in CSE14x. You should build up arrays manually _if_ necessary',
-
-    '[FORBIDDEN] .toCharArray': '.toCharArray is a *forbidden* feature. You are \n' +
-    '\tnot allowed  to use it in CSE14x. You should build up arrays manually _if_ necessary',
+    '\tnot allowed to use it in CSE14x. You should build up arrays manually _if_ necessary',
 
     '[FORBIDDEN] FileReader': 'FileReader is a *forbidden* feature. You are \n' +
-    '\tnot allowed  to use it in CSE14x. You should use Scanners to read file input',
+    '\tnot allowed to use it in CSE14x. You should use Scanners to read file input',
+
+    '[FORBIDDEN] BufferedReader': 'BufferedReader is a *forbidden* feature. You are \n' +
+    '\tnot allowed to use it in CSE14x. You should use Scanners to read file input',
+
+    '[FORBIDDEN] FileWriter': 'FileWriter is a *forbidden* feature. You are \n' +
+    '\tnot allowed to use it in CSE14x. You should use PrintStreams to write file output',
+
 }
 
 
@@ -577,19 +612,22 @@ def exit_on_error(exctype, value, tb):
     obj.reverse()
     line_num = obj[0].lineno
     line = obj[0].line
-    sys.exit(
-        f"""\n\tGot a {exctype.__name__} in file {fname} on line {line_num}
+    console.print(f"""\n\tGot a [bold blue]{exctype.__name__}[/bold blue] in file {fname} on line [bold blue]{line_num}[/bold blue]
         because of line: \n \t\t{line}\n
-        (TA Note) This test probably broke :( post on the message board 
+        (TA Note) This test probably broke :cry: Post on the message board!
         Terminating program...\n""")
+    sys.exit()
 
 
-sys.excepthook = exit_on_error
+# sys.excepthook = exit_on_error
 
 
 def main():
-    checker = CodeQualityChecker(mode='private', verbose=True)
-    print(checker.run_tests(sys.argv[1]))
+    print()
+    console.rule('CSE 142 Code Quality Checker')
+    checker = CodeQualityChecker(mode='visible', verbose=True)
+    md = checker.run_tests(sys.argv[1])
+    console.print(md)
 
 
 if __name__ == '__main__':
