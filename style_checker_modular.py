@@ -432,11 +432,6 @@ def check_nondescriptivevariables(visible):
             return [key, BANK[key]]
 
 
-# @add_test
-# def check_privatefields(private):
-#     """checks if a field is private"""
-
-
 def _pairwise(iterable):
     """Returns a pairwise iterable version of iterable"""
     a = iter(iterable)
@@ -838,6 +833,9 @@ BANK = {
     'Multiple statements per line': 'There is more than one statement on this line. It\'s best\n' +
     '\tpractice to limit your code to one statement per line',
 
+    'Non-Private fields': 'Fields should be private. This ensures that no client of your object will\n' +
+    '\t be able to directly change the state of your object in a way that you haven’t allowed them to',
+
     '[FORBIDDEN] Break': 'Break is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed to use it in \n' +
     '\tCSE14x. Considering exiting a loop with a different conditional structure',
 
@@ -940,7 +938,7 @@ def main():
     print()
     console.rule('CSE 142 Code Quality Checker')
     checker = CodeQualityChecker(
-        mode='visible', verbose=True, debug=True)
+        mode='private', verbose=True, debug=True)
     tests = checker.run_tests(sys.argv[1])
     console.print(tests)
 
