@@ -18,27 +18,37 @@ TODO: Write Tests
 Features to add:
 * long line checking for line with comments at the end
 * checking in_class or not
-* BufferedFileReader, FileReader, FileWriter...
+* Naming conventions
+    * Variable naming conventions
+    * PascalCasing
+    * camelCasing
+    * non-descriptive variable names
 
 authors: Omar, Sumant
 emails: oibra@uw.edu, guhas2@uw.edu
 """
 import re
 import sys
+import subprocess
 import traceback
 import inspect
 import tokenize
 from configparser import RawConfigParser
 from io import TextIOWrapper
+try:
+    import rich
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", 'rich'])
+
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.syntax import Syntax
-
 console = Console()
 
 # Global Setup
 NUM_CONSOLE_SCANNER = 0
 NUM_RANDOM = 0
+DEBUG = False
 
 # Regex Setup
 BLANK_PRINTLNS = re.compile(r'System\.out\.println[\s]*\(""\)')
@@ -58,7 +68,18 @@ CONSOLE_SCANNER = re.compile(r'.*new.*Scanner.*\(.*System.*\.in.*\).*')
 RANDOM = re.compile(r'.*new.*Random.*\(.*\).*')
 FILE_READER = re.compile(r'FileReader')
 FILE_WRITER = re.compile(r'FileWriter')
-BUFFERED_REAFER = re.compile(r'BufferedReader')
+BUFFERED_READER = re.compile(r'BufferedReader')
+STRING_JOIN = re.compile(r'\.join')
+STRING_MATCHES = re.compile(r'\.matches')
+ARRAYS_AS_LIST = re.compile(r'Arrays\.asList')
+ARRAYS_FILL = re.compile(r'Arrays\.fill')
+ARRAYS_COPY_OF = re.compile(r'Arrays\.copyOf')
+ARRAYS_COPY_OF_RANGE = re.compile(r'Arrays\.copyOfRange')
+ARRAYS_SORT = re.compile(r'Arrays\.sort')
+COLLECTIONS_COPY = re.compile(r'Collections\.copy')
+COLLECTIONS_SORT = re.compile(r'Collections\.sort')
+BACKSLASH_N = re.compile(r'\\n')
+CAMEL_CASING = re.compile(r'(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])')
 
 _checks = {'visible': {}, 'private': {}}
 
@@ -139,6 +160,24 @@ def check_bad_boolean_zen(visible):
     match_false = BOOLEAN_FALSE.search(visible)
     key = 'Bad boolean zen ( == false)'
     if match_false:
+        return [key, BANK[key]]
+
+
+@add_check
+def check_multiplestatements(visible):
+    """checks for multiple statements on a line"""
+    match = len(visible.split(';')) > 2 and 'for' not in visible
+    key = 'Multiple statements per line'
+    if match:
+        return [key, BANK[key]]
+
+
+@add_check
+def check_backslashn(visible):
+    """checks for backslash n on a line"""
+    match = BACKSLASH_N.search(visible) and 'printf' not in visible
+    key = '\\n on line'
+    if match:
         return [key, BANK[key]]
 
 
@@ -253,10 +292,231 @@ def check_filewriter(visible):
 @add_check
 def check_bufferedreader(visible):
     """checks for BufferedReader()"""
-    match = BUFFERED_REAFER.search(visible)
+    match = BUFFERED_READER.search(visible)
     key = '[FORBIDDEN] BufferedReader'
     if match:
         return [key, BANK[key]]
+
+
+@add_check
+def check_stringjoin(visible):
+    """checks for String.join()"""
+    match = STRING_JOIN.search(visible)
+    key = '[FORBIDDEN] String.join()'
+    if match:
+        return [key, BANK[key]]
+
+
+@add_check
+def check_stringmatches(visible):
+    """checks for String.matches()"""
+    match = STRING_MATCHES.search(visible)
+    key = '[FORBIDDEN] String.matches()'
+    if match:
+        return [key, BANK[key]]
+
+
+@add_check
+def check_arraysaslist(visible):
+    """checks for Arrays.asList()"""
+    match = ARRAYS_AS_LIST.search(visible)
+    key = '[FORBIDDEN] Arrays.asList()'
+    if match:
+        return [key, BANK[key]]
+
+
+@add_check
+def check_arrayscopyof(visible):
+    """checks for Arrays.copyOf()"""
+    match = ARRAYS_COPY_OF.search(visible)
+    match_range = ARRAYS_COPY_OF_RANGE.search(visible)
+    key = '[FORBIDDEN] Arrays.copyOf()'
+    if match and not match_range:
+        return [key, BANK[key]]
+
+
+@add_check
+def check_arrayscopyofrange(visible):
+    """checks for Arrays.copyOfRange()"""
+    match = ARRAYS_COPY_OF_RANGE.search(visible)
+    key = '[FORBIDDEN] Arrays.copyOfRange()'
+    if match:
+        return [key, BANK[key]]
+
+
+@add_check
+def check_arrayssort(visible):
+    """checks for Arrays.sort()"""
+    match = ARRAYS_SORT.search(visible)
+    key = '[FORBIDDEN] Arrays.sort()'
+    if match:
+        return [key, BANK[key]]
+
+
+@add_check
+def check_arraysfill(visible):
+    """checks for Arrays.fill()"""
+    match = ARRAYS_FILL.search(visible)
+    key = '[FORBIDDEN] Arrays.fill()'
+    if match:
+        return [key, BANK[key]]
+
+
+@add_check
+def check_collectionscopy(visible):
+    """checks for Collections.copy()"""
+    match = COLLECTIONS_COPY.search(visible)
+    key = key = '[FORBIDDEN] Collections.copy()'
+    if match:
+        return [key, BANK[key]]
+
+
+@add_check
+def check_collectionssort(visible):
+    """checks for Collections.sort()"""
+    match = COLLECTIONS_SORT.search(visible)
+    key = key = '[FORBIDDEN] Collections.sort()'
+    if match:
+        return [key, BANK[key]]
+
+
+@add_check
+def check_camelcasing(visible):
+    """checks for non camelCased variables"""
+    rv = _getProperties(visible)
+    if rv is None:
+        return
+    type, isVariable, name, params = rv
+    key = 'Incorrect camel casing'
+    if params is not None:
+        vars = []
+        params = params[3:-1]
+        vars.append(params[0].split('(')[-1])
+        for p in params[1:-1]:
+            p = p.replace(',', '')
+            vars.append(p)
+        vars.append(params[-1].split(')')[0])
+        for _type, _name in _pairwise(vars):
+            if _name.isalpha() and not _camelHelper(_name):
+                return [key, BANK[key]]
+
+    if name is not None:
+        name = name.replace(';', '')
+        if '_' in name or (name.isalpha() and not _camelHelper(name)):
+            return [key, BANK[key]]
+
+
+@add_check
+def check_nondescriptivevariables(visible):
+    """checks for non descriptive variable names"""
+    rv = _getProperties(visible)
+    if rv is None:
+        return
+    type, isVariable, name, params = rv
+    key = 'Non-Descriptive variable name'
+    if params is not None:
+        vars = []
+        params = params[3:-1]
+        vars.append(params[0].split('(')[-1])
+        for p in params[1:-1]:
+            p = p.replace(',', '')
+            vars.append(p)
+        vars.append(params[-1].split(')')[0])
+        for _type, _name in _pairwise(vars):
+            if _name.isalpha() and not _nameHelper(_type, True, _name):
+                return [key, BANK[key]]
+
+    if name is not None:
+        name = name.replace(';', '')
+        if name.isalpha() and not _nameHelper(type, isVariable, name):
+            return [key, BANK[key]]
+
+
+# @add_test
+# def check_privatefields(private):
+#     """checks if a field is private"""
+
+
+def _pairwise(iterable):
+    """Returns a pairwise iterable version of iterable"""
+    a = iter(iterable)
+    return zip(a, a)
+
+
+def _nameHelper(type, isVariable, name):
+    """helper for checking if a word is non-descriptive"""
+    if isVariable:
+        if type == 'Graphics' and name == 'g':
+            return True
+        elif ((type == 'int' or type == 'double') and (
+                name == 'x' or name == 'y')):
+            return True
+        elif type == 'int' and (name == 'i' or name == 'j' or name == 'k'):
+            return True
+        elif type == 'Random' and name == 'r':
+            return True
+        elif type == 'File' and name == 'f':
+            return True
+        elif type == 'int[]' and (name == 'a' or name == 'b'):
+            return True
+        elif type == 'DrawingPanel' and name == 'p':
+            return True
+
+    if len(name) < 2:
+        return False
+    return True
+
+
+def _camelHelper(word):
+    """helper for checking if a word is camelCased"""
+    split = re.split(CAMEL_CASING, word)
+
+    if not split[0].islower():
+        return False
+
+    for word in split[1:]:
+        if not word[0].isupper():
+            return False
+        sub = word[1:]
+        if sub != sub.lower() and sub != sub.upper():
+            return False
+
+    return True
+
+
+def _getProperties(visible):
+    """gets variable name, type and isVariable, params from a line"""
+    visible = visible.strip()
+    split = re.split(' ', visible)
+    if 'final' in visible or 'class' in visible or 'import' in visible:
+        return
+
+    name = None
+    type = None
+    isVariable = False
+    params = None
+    if (len(split) == 2 and 'return' not in visible and '++' not in split[0] and
+            '++' not in split[1] and '--' not in split[0] and '--' not in split[1] and
+            ';' in split[1]):
+        isVariable = True
+        name = split[1]
+        type = split[0]
+    elif '=' in split and split.index('=') > 1:
+        isVariable = True
+        idx = split.index('=')
+        name = split[idx - 1]
+        type = split[idx - 2]
+    elif 'public' in visible or 'private' in visible or 'protected' in visible:
+        if 'static' in visible:
+            name = split[3].split('(')[0]
+            type = split[2]
+        else:
+            name = split[2].split('(')[0]
+            type = split[1]
+
+        params = split
+
+    return type, isVariable, name, params
 
 
 # Code Quality Checking
@@ -376,22 +636,28 @@ class CodeQualityChecker:
     def __init__(self, *args, **kwargs):
         self.checker_class = CSE142Checker
         self.verbose = kwargs.pop('verbose', False)
+        self.tab_size = kwargs.pop('tab_size', 4)
+        self.max_line_length = kwargs.pop('max_line_length', 100)
         self.report = GenerateReport(verbose=self.verbose)
         self.mode = kwargs.pop('mode', 'visible')
+        self.debug = kwargs.pop('debug', False)
+        if (self.debug):
+            global DEBUG
+            DEBUG = True
         self.checks = {
             'visible': self.get_checks('visible'),
             'private': self.get_checks('private'),
         }
         self.options = {
-            "MAX_LINE_LENGTH": 100,
-            "TAB_SIZE": 4,
+            "MAX_LINE_LENGTH": self.max_line_length,
+            "TAB_SIZE": self.tab_size,
             "VERBOSE": self.verbose
         }
 
     def run_tests(self, filename, expected=None):
         """Run all checks on a java source file"""
         console.print(
-            f'[bold blue]Checking {filename}[/bold blue]... \n')
+            f'[bold]Checking [blue]{filename}[/blue][/bold]: \n')
 
         checker = self.checker_class(
             filename, self.checks, options=self.options)
@@ -403,7 +669,7 @@ class CodeQualityChecker:
         result = checker.check_all(expected=expected, mode=self.mode)
 
         if not result:
-            return '\tPassed!'
+            return '\tLooks Good!\n'
         return result
 
     def get_checks(self, category):
@@ -517,8 +783,13 @@ class GenerateReport:
             errors = ''.join([errors, f'\tTotal Errors: {self.get_count()}\n'])
             errors = ''.join(
                 [errors, f'\tUnique Errors: {self.get_unique()}\n'])
-            errors = ''.join(
-                [errors, f'\tForbidden Features: {len(forbidden)}\n'])
+
+            if len(forbidden) == 0:
+                errors = ''.join(
+                    [errors, f'\t(Unique) Forbidden Features: {len(forbidden)}\n'])
+            else:
+                errors = ''.join(
+                    [errors, f'\t[red](Unique) Forbidden Features:[/red] {len(forbidden)}\n'])
 
         return errors
 
@@ -544,7 +815,7 @@ BANK = {
     '\tare too long should be broken up and wrapped to the next line.',
 
     'Blank println statements': 'A blank println should actually be blank. \n' +
-    '\tYou should always print a blank line using System.out.println(). Printing \n' +
+    f'\tYou should always print a blank line using [bold]System.out.println()[/bold]. Printing \n' +
     '\tan empty String with System.out.println("") is considered bad style; it makes\n' +
     '\tthe intention less clear.',
 
@@ -561,44 +832,83 @@ BANK = {
     '\tto only have one Random object created, and pass that Random around to anywhere that\n' +
     '\tneeds it.',
 
-    '[FORBIDDEN] Break': 'Break is a *forbidden* feature. You are not allowed to use it in \n' +
+    '\\n on line': '\\n should only be used in printf. It\'s best practice\n' +
+    '\tYou should just use println if you want to print a full line.',
+
+    'Multiple statements per line': 'There is more than one statement on this line. It\'s best\n' +
+    '\tpractice to limit your code to one statement per line',
+
+    '[FORBIDDEN] Break': 'Break is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed to use it in \n' +
     '\tCSE14x. Considering exiting a loop with a different conditional structure',
 
-    '[FORBIDDEN] Continue': 'Continue is a *forbidden* feature. You are not allowed to use \n' +
+    '[FORBIDDEN] Continue': 'Continue is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed to use \n' +
     '\tit in CSE14x. Considering using a different conditional structure',
 
-    '[FORBIDDEN] Try/Catch': 'Try/Catch is a *forbidden* feature. You are not allowed \n' +
+    '[FORBIDDEN] Try/Catch': 'Try/Catch is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed \n' +
     '\tto use it in CSE14x. Consider throwing Exceptions instead',
 
-    '[FORBIDDEN] Var': 'Var is a *forbidden* feature. You are not allowed \n' +
+    '[FORBIDDEN] Var': 'Var is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed \n' +
     '\tto use it in CSE14x. Declare typed variables instead',
 
-    '[FORBIDDEN] .toArray': '.toArray is a *forbidden* feature. You are not allowed \n' +
+    '[FORBIDDEN] .toArray': '.toArray is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed \n' +
     '\tto use it in CSE14x. Convert to arrays manually',
 
-    '[FORBIDDEN] StringBuilder': 'StringBuilder is a *forbidden* feature. You are \n' +
-    '\tnot allowed to use it in CSE14x. Consider using String concatenation',
+    '[FORBIDDEN] StringBuilder': 'StringBuilder is a [bold]forbidden[/bold] feature. You are \n' +
+    '\t[italic]not[/italic] allowed to use it in CSE14x. Consider using String concatenation',
 
-    '[FORBIDDEN] StringBuffer': 'StringBuffer is a *forbidden* feature. You are \n' +
-    '\tnot allowed to use it in CSE14x. Consider using simple immutable String',
+    '[FORBIDDEN] StringBuffer': 'StringBuffer is a [bold]forbidden[/bold] feature. You are \n' +
+    '\t[italic]not[/italic] allowed to use it in CSE14x. Consider using simple immutable String',
 
-    '[FORBIDDEN] StringJoiner': 'StringJoiner is a *forbidden* feature. You are \n' +
-    '\tnot allowed to use it in CSE14x. Consider using String concatenation',
+    '[FORBIDDEN] StringJoiner': 'StringJoiner is a [bold]forbidden[/bold] feature. You are \n' +
+    '\t[italic]not[/italic] allowed to use it in CSE14x. Consider using String concatenation',
 
-    '[FORBIDDEN] StringTokenizer': 'StringJoiner is a *forbidden* feature. You are \n' +
-    '\tnot allowed to use it in CSE14x. Not sure why you are using this in 142 :)',
+    '[FORBIDDEN] StringTokenizer': 'StringJoiner is a [bold]forbidden[/bold] feature. You are \n' +
+    '\t[italic]not[/italic] allowed to use it in CSE14x. [italic]Not[/italic] sure why you are using this in 142 :)',
 
-    '[FORBIDDEN] .toCharArray': '.toCharArray is a *forbidden* feature. You are \n' +
-    '\tnot allowed to use it in CSE14x. You should build up arrays manually _if_ necessary',
+    '[FORBIDDEN] .toCharArray': '.toCharArray is a [bold]forbidden[/bold] feature. You are \n' +
+    '\t[italic]not[/italic] allowed to use it in CSE14x. You should build up arrays manually _if_ necessary',
 
-    '[FORBIDDEN] FileReader': 'FileReader is a *forbidden* feature. You are \n' +
-    '\tnot allowed to use it in CSE14x. You should use Scanners to read file input',
+    '[FORBIDDEN] FileReader': 'FileReader is a [bold]forbidden[/bold] feature. You are \n' +
+    '\t[italic]not[/italic] allowed to use it in CSE14x. You should use Scanners to read file input',
 
-    '[FORBIDDEN] BufferedReader': 'BufferedReader is a *forbidden* feature. You are \n' +
-    '\tnot allowed to use it in CSE14x. You should use Scanners to read file input',
+    '[FORBIDDEN] BufferedReader': 'BufferedReader is a [bold]forbidden[/bold] feature. You are \n' +
+    '\t[italic]not[/italic] allowed to use it in CSE14x. You should use Scanners to read file input',
 
-    '[FORBIDDEN] FileWriter': 'FileWriter is a *forbidden* feature. You are \n' +
-    '\tnot allowed to use it in CSE14x. You should use PrintStreams to write file output',
+    '[FORBIDDEN] FileWriter': 'FileWriter is a [bold]forbidden[/bold] feature. You are \n' +
+    '\t[italic]not[/italic] allowed to use it in CSE14x. You should use PrintStreams to write file output',
+
+    '[FORBIDDEN] String.join()': 'String.join() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed\n' +
+    '\tto use it in CSE14x. Considering using String concatenation instead',
+
+    '[FORBIDDEN] String.matches()': 'String.join() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
+    '\tallowed to use it in CSE14x. You should not use regex!',
+
+    '[FORBIDDEN] Arrays.asList()': 'Arrays.asList() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
+    '\tallowed to use it in CSE142. You should not use ArrayList<E>',
+
+    '[FORBIDDEN] Arrays.copyOf()': 'Arrays.copyOf() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
+    '\tallowed to use it in CSE142. You should not use ArrayList<E>',
+
+    '[FORBIDDEN] Arrays.copyOfRange()': 'Arrays.copyOfRange() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
+    '\tallowed to use it in CSE142. You should not use ArrayList<E>',
+
+    '[FORBIDDEN] Arrays.sort()': 'Arrays.sort() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
+    '\tallowed to use it in CSE142. Sort arrays manually [italic]if[/italic] necessary',
+
+    '[FORBIDDEN] Arrays.fill()': 'Arrays.fill() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
+    '\tallowed to use it in CSE142. Fill arrays manually [italic]if[/italic] necessary',
+
+    '[FORBIDDEN] Collections.copy()': 'Collections.copy() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
+    '\tallowed to use it in CSE142. Copy collections manually [italic]if[/italic] necessary',
+
+    '[FORBIDDEN] Collections.sort()': 'Collections.sort() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
+    '\tallowed to use it in CSE142. Sort collections manually [italic]if[/italic] necessary',
+
+    'Incorrect camel casing': 'This name has the wrong naming conventions (should be camelCased). It\'s best practice\n' +
+    '\tto have all identifier names camelCased by having all words after the first start with an uppercase letter',
+
+    'Non-Descriptive variable name': 'This name is not descriptive. It\'s best practice\n' +
+    '\tto have all identifier names specify what they do'
 
 }
 
@@ -607,27 +917,32 @@ BANK = {
 def exit_on_error(exctype, value, tb):
     """Exits program on error"""
     import os
-    fname = os.path.split(tb.tb_frame.f_code.co_filename)[1]
-    obj = traceback.extract_tb(tb)
-    obj.reverse()
-    line_num = obj[0].lineno
-    line = obj[0].line
-    console.print(f"""\n\tGot a [bold blue]{exctype.__name__}[/bold blue] in file {fname} on line [bold blue]{line_num}[/bold blue]
-        because of line: \n \t\t{line}\n
-        (TA Note) This test probably broke :cry: Post on the message board!
+    if not DEBUG:
+        fname = os.path.split(tb.tb_frame.f_code.co_filename)[1]
+        obj = traceback.extract_tb(tb)
+        line_num = obj[-1].lineno
+        line = obj[-1].line
+        console.print(f"""\tGot a [bold blue]{exctype.__name__}[/bold blue] in file {fname} on line [bold blue]{line_num}[/bold blue]
+        because of line:""")
+        print(f'\t\t{line}')
+        console.print(f"""
+        (TA Note) This test probably broke :cry: [bold red]Post on the message board![/bold red]
         Terminating program...\n""")
-    sys.exit()
+        sys.exit()
+    else:
+        sys.exit(traceback.print_exception(exctype, value, tb))
 
 
-# sys.excepthook = exit_on_error
+sys.excepthook = exit_on_error
 
 
 def main():
     print()
     console.rule('CSE 142 Code Quality Checker')
-    checker = CodeQualityChecker(mode='visible', verbose=True)
-    md = checker.run_tests(sys.argv[1])
-    console.print(md)
+    checker = CodeQualityChecker(
+        mode='visible', verbose=True, debug=True)
+    tests = checker.run_tests(sys.argv[1])
+    console.print(tests)
 
 
 if __name__ == '__main__':
