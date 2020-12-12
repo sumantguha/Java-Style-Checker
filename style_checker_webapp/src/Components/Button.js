@@ -1,12 +1,12 @@
 import React from 'react';
 import './Button.css';
 
-function Button({content, onClick}) {
+function SubmitButton({content, onClick}) {
   return (
     <button onClick={onClick} className='button'>
-      <h4 className='content'>{content}</h4>
+      <h4 className='content-info'>{content}</h4>
     </button>
   );
 }
 
-export default Button;
+export default SubmitButton;

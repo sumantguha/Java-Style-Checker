@@ -4,24 +4,19 @@
   border: none;
   background-color: #f76c6c;
   border-color: #f76c6c;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  border-bottom-left-radius: 35px;
-  border-bottom-right-radius: 35px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+  width: 600px;
+  margin: 0 auto;
   vertical-align: middle;
-  padding-top: 2%;
+  padding-top: 1%;
   transition: 0.3s;
+  margin-top: 1.5%;
 }
 
 .button:hover {
   background-color: #e74f4f;
 }
 
-.content {
+.content-info {
   text-transform: uppercase;
   color: white;
   font-family: 'Open Sans', sans-serif;
