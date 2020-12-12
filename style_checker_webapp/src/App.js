@@ -18,8 +18,18 @@ import 'ace-builds/src-noconflict/ext-language_tools';
 
 function App() {
   const [data, setData] = useState([{}]);
-  const [code, setCode] = useState([{}]);
+  const [didSubmit, setDidSubmit] = useState(false);
   const [theme, setTheme] = useState('solarized_dark');
+  const [errors, setErrors] = useState(null);
+
+  const Result = ({props}) => {
+    return (
+      <div className='dynamic'>
+        <h1>Props:</h1>
+        <h2>{props}</h2>
+      </div>
+    );
+  };
 
   const _handleSubmit = async () => {
     const response = await fetch('http://localhost:5000/code', {
@@ -33,10 +43,13 @@ function App() {
     return response.json();
   };
 
-  const handleSubmit = async () => {
+  useEffect(async () => {
+    setDidSubmit(false);
     const response = await _handleSubmit();
-    console.log(response.result);
-  };
+    const error = response.result;
+    setErrors(error);
+    // console.log(errors);
+  }, [didSubmit]);
 
   const getValue = (newValue) => {
     setData(newValue);
@@ -47,6 +60,7 @@ function App() {
       <div className='header'>
         <h1>CSE 142 Code Quality Checker</h1>
       </div>
+      {/* <Result category='Hello' line_num='10' times='30' message='Println' /> */}
       <div className='parent'>
         <div className='buttons'>
           <RadioButton
@@ -142,23 +156,28 @@ function App() {
           />
         </div>
       </div>
-
-      <AceEditor
-        className='codeBlock'
-        mode='java'
-        theme={theme}
-        setOptions={{
-          enableBasicAutocompletion: true,
-          enableLiveAutocompletion: true,
-          enableSnippets: true,
-        }}
-        fontSize={14}
-        defaultValue=''
-        height='500px'
-        width='600px'
-        onChange={getValue}
-      />
-      <SubmitButton content='Submit' onClick={handleSubmit} />
+      <div className='manager'>
+        <div className='main'>
+          <AceEditor
+            className='codeBlock'
+            mode='java'
+            theme={theme}
+            setOptions={{
+              enableBasicAutocompletion: true,
+              enableLiveAutocompletion: true,
+              enableSnippets: true,
+            }}
+            fontSize={16}
+            defaultValue=''
+            height='500px'
+            width='700px'
+            onChange={getValue}
+            placeholder="Paste your program's source code here..."
+          />
+          <SubmitButton content='Submit' onClick={() => setDidSubmit(true)} />
+        </div>
+        {errors && <Result props={errors}></Result>}
+      </div>
 
       <div className='footer fixed-bottom'>
         <h4>© cse142 2020</h4>
@@ -166,5 +185,26 @@ function App() {
     </div>
   );
 }
+
+// const handleSubmit = async () => {
+//   // const response = await _handleSubmit();
+//   // setResult(response.result);
+//   // setDidSubmit(!didSubmit);
+//   // if (result.length > 0) {
+//   //   let contents = result.split(',');
+//   //   for (let i = 0; i < contents.length - 3; i += 4) {
+//   //     var category = contents[i].slice(3, -1);
+//   //     var line_num = +contents[i + 1].slice(2, -1);
+//   //     var times = +contents[i + 2].slice(2, -1);
+//   //     var message = contents[i + 3].slice(2, -2);
+//   //     if (message.endsWith('"')) {
+//   //       message = message.slice(0, -1);
+//   //     }
+//   //     let newList = [category, line_num, times, message];
+//   //     ERRORS.push(newList);
+//   //   }
+//   // console.log(ERRORS);
+//   //}
+// };
 
 export default App;

@@ -533,7 +533,7 @@ def _getProperties(visible):
 class CSE142Checker:
     """Load a Java source file, tokenize it, check coding style."""
 
-    def __init__(self, filename, checks, options=None, **kwargs):
+    def __init__(self, filename, checks, mode, options=None, **kwargs):
         if options is None:
             options = CodeQualityChecker(kwargs).options
         else:
@@ -544,8 +544,9 @@ class CSE142Checker:
         self.verbose = options["VERBOSE"]
         self.lines = readlines(filename)
         self.total_lines = len(self.lines)
+        self.mode = mode
         self.report = GenerateReport(
-            verbose=self.verbose, total=self.total_lines)
+            verbose=self.verbose, mode=self.mode, total=self.total_lines)
         self.report_error = self.report.error
         self.visible = checks['visible']
         self.private = checks['private']
@@ -648,8 +649,8 @@ class CodeQualityChecker:
         self.verbose = kwargs.pop('verbose', False)
         self.tab_size = kwargs.pop('tab_size', 4)
         self.max_line_length = kwargs.pop('max_line_length', 100)
-        self.report = GenerateReport(verbose=self.verbose)
         self.mode = kwargs.pop('mode', 'visible')
+        self.report = GenerateReport(verbose=self.verbose, mode=self.mode)
         self.debug = kwargs.pop('debug', False)
         if (self.debug):
             global DEBUG
@@ -666,22 +667,24 @@ class CodeQualityChecker:
 
     def run_tests(self, filename, expected=None):
         """Run all checks on a java source file"""
-        console.print(
-            f'[bold]Checking [blue]{filename}[/blue][/bold]: \n')
+        if self.mode != 'web':
+            console.print(
+                f'[bold]Checking [blue]{filename}[/blue][/bold]: \n')
 
         checker = self.checker_class(
-            filename, self.checks, options=self.options)
+            filename, self.checks, options=self.options, mode=self.mode)
 
-        if self.mode != 'visible' and self.mode != 'private':
+        if self.mode != 'visible' and self.mode != 'private' and self.mode != 'web':
             sys.exit(
-                'Create Checker with mode either visible or private')
+                'Create Checker with mode either visible, private or web')
 
         result = checker.check_all(expected=expected, mode=self.mode)
 
-        if not result:
+        if not result and self.mode != 'web':
             return '\t😀👍 [red]L[/red][orange1]o[/orange1][yellow]o[/yellow]' + \
                 '[green]k[/green][blue]s[/blue] [purple]G[/purple][blue]o[/blue]' + \
                 '[green]o[/green][yellow]d[/yellow][orange1]![/orange1]\n'
+
         return result
 
     def get_checks(self, category):
@@ -697,7 +700,7 @@ class CodeQualityChecker:
 class GenerateReport:
     """Collect the results of the checks"""
 
-    def __init__(self, verbose, total=None):
+    def __init__(self, verbose, mode, total=None):
         """Specific fields: total errors, errors by category
         and errors messages """
         self.messages = {}
@@ -705,6 +708,7 @@ class GenerateReport:
         self.lines = {}
         self.verbose = verbose
         self.total = total
+        self.mode = mode
 
     def init_file(self, filename, expected):
         """Constructs a new file"""
@@ -745,6 +749,7 @@ class GenerateReport:
         index = 1
         forbidden = []
         other = []
+        web_errors = []
         for item in self.categories.items():
             if item[0].startswith('[FORBIDDEN]'):
                 forbidden.append(item)
@@ -754,6 +759,19 @@ class GenerateReport:
         other.sort(key=lambda x: x[1], reverse=True)
         total = forbidden + other
         for category, count in total:
+            formatted_categories = self.messages[category]
+            formatted_categories = re.sub(
+                '([\[]).*?([\]])', '', formatted_categories)
+            formatted_categories = re.sub(
+                '\\n', ' ', formatted_categories)
+            if self.mode == 'web':
+                web_errors.append([
+                    category, self.lines[category], {
+                        count}, formatted_categories
+                ])
+
+                continue
+
             multiple_scanners = category.startswith(
                 'Multiple console scanners')
             multiple_random = category.startswith('Multiple random objects')
@@ -802,7 +820,8 @@ class GenerateReport:
             else:
                 errors = ''.join(
                     [errors, f'[red]Unique Forbidden Features:[/red] {len(forbidden)}\n'])
-
+        if self.mode == 'web':
+            return web_errors
         return errors
 
 
@@ -951,15 +970,17 @@ def exit_on_error(exctype, value, tb):
 sys.excepthook = exit_on_error
 
 
-def main(filename):
+def main(filename, mode, verbose, debug):
     print()
-    console.rule('CSE 142 Code Quality Checker')
-    checker = CodeQualityChecker(
-        mode='private', verbose=True, debug=False)
+    if mode != 'web':
+        console.rule('CSE 142 Code Quality Checker')
+    checker = CodeQualityChecker(mode=mode, verbose=verbose, debug=debug)
     tests = checker.run_tests(filename)
-    console.print(tests)
-    return tests
+    if mode == 'web':
+        return tests
+    else:
+        console.print(tests)
 
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main(filename=sys.argv[1], mode='web', verbose=True, debug=False)

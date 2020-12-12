@@ -23,7 +23,8 @@ def result():
     if request.json:
         content = request.json
         with open('student_file.java', 'w') as file:
-            file.write(content)
-        tests = checker.main('student_file.java')
-        return jsonify(result=tests)
+            file.write(str(content))
+        tests = checker.main('student_file.java',
+                             mode='web', verbose=True, debug=False)
+        return jsonify(result=str(tests))
     return "No code"

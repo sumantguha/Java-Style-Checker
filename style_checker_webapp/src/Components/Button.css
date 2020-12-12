@@ -1,19 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;700;800&display=swap');
 
 .button {
+  position: absolute;
   border: none;
   background-color: #f76c6c;
   border-color: #f76c6c;
-  width: 600px;
-  margin: 0 auto;
+  width: 700px;
   vertical-align: middle;
   padding-top: 1%;
   transition: 0.3s;
   margin-top: 1.5%;
+  left: 5%;
 }
 
 .button:hover {
   background-color: #e74f4f;
+}
+
+.button:active {
+  background-color: blue;
 }
 
 .content-info {
