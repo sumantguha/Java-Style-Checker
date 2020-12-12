@@ -4,7 +4,7 @@
   text-align: center;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  font-family: 'Open Sans', sans-serif;
 }
 
 .header {
@@ -21,7 +21,6 @@
   color: white;
   text-transform: uppercase;
   line-height: 10vh;
-  font-family: 'Open Sans', sans-serif;
   font-weight: 800;
   font-size: 2rem;
   letter-spacing: 0.2rem;
@@ -61,8 +60,32 @@
 }
 
 .dynamic {
-  background-color: red;
-  margin-left: 10%;
-  width: 400px;
+  /* border: 2px solid #f76c6c; */
+  background-color: #002b36;
+  margin-left: 5%;
+  width: 475px;
   height: 575px;
+  padding: 1%;
+}
+
+.good {
+  background-color: #002b36;
+  margin-left: 5%;
+  width: 475px;
+  height: 575px;
+  padding: 1%;
+}
+
+h6 {
+  color: #f8e9a1;
+  text-align: left;
+}
+
+.good h4 {
+  line-height: 500px;
+  color: white;
+}
+
+p {
+  color: white;
 }

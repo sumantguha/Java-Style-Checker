@@ -17,18 +17,40 @@ import 'ace-builds/src-noconflict/theme-terminal';
 import 'ace-builds/src-noconflict/ext-language_tools';
 
 function App() {
-  const [data, setData] = useState([{}]);
+  const [data, setData] = useState(null);
   const [didSubmit, setDidSubmit] = useState(false);
   const [theme, setTheme] = useState('solarized_dark');
   const [errors, setErrors] = useState(null);
 
   const Result = ({props}) => {
-    return (
-      <div className='dynamic'>
-        <h1>Props:</h1>
-        <h2>{props}</h2>
-      </div>
-    );
+    if (props != '[]') {
+      let contents = props.split(',');
+      for (let i = 0; i < contents.length - 3; i += 4) {
+        var category = contents[i].slice(3, -1);
+        var line_num = +contents[i + 1].slice(2, -1);
+        var times = +contents[i + 2].slice(2, -1);
+        var message = contents[i + 3].slice(2, -2);
+        if (message.endsWith('"')) {
+          message = message.slice(0, -1);
+        }
+      }
+      return (
+        <div className='dynamic'>
+          <h6>Checking...</h6>
+          <p>{category}</p>
+          <p>{line_num}</p>
+          <p>{times}</p>
+          <p>{message}</p>
+        </div>
+      );
+    } else {
+      return (
+        <div className='good'>
+          <h6>Checking...</h6>
+          <h4>Looks good :)</h4>
+        </div>
+      );
+    }
   };
 
   const _handleSubmit = async () => {
@@ -48,7 +70,6 @@ function App() {
     const response = await _handleSubmit();
     const error = response.result;
     setErrors(error);
-    // console.log(errors);
   }, [didSubmit]);
 
   const getValue = (newValue) => {
@@ -170,7 +191,7 @@ function App() {
             fontSize={16}
             defaultValue=''
             height='500px'
-            width='700px'
+            width='750px'
             onChange={getValue}
             placeholder="Paste your program's source code here..."
           />
@@ -185,26 +206,5 @@ function App() {
     </div>
   );
 }
-
-// const handleSubmit = async () => {
-//   // const response = await _handleSubmit();
-//   // setResult(response.result);
-//   // setDidSubmit(!didSubmit);
-//   // if (result.length > 0) {
-//   //   let contents = result.split(',');
-//   //   for (let i = 0; i < contents.length - 3; i += 4) {
-//   //     var category = contents[i].slice(3, -1);
-//   //     var line_num = +contents[i + 1].slice(2, -1);
-//   //     var times = +contents[i + 2].slice(2, -1);
-//   //     var message = contents[i + 3].slice(2, -2);
-//   //     if (message.endsWith('"')) {
-//   //       message = message.slice(0, -1);
-//   //     }
-//   //     let newList = [category, line_num, times, message];
-//   //     ERRORS.push(newList);
-//   //   }
-//   // console.log(ERRORS);
-//   //}
-// };
 
 export default App;
