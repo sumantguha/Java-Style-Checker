@@ -951,19 +951,15 @@ def exit_on_error(exctype, value, tb):
 sys.excepthook = exit_on_error
 
 
-def main():
+def main(filename):
     print()
-    try:
-        for n in track(range(n), description="Processing..."):
-            sleep(0.5)
-    except:
-        pass
     console.rule('CSE 142 Code Quality Checker')
     checker = CodeQualityChecker(
         mode='private', verbose=True, debug=False)
-    tests = checker.run_tests(sys.argv[1])
+    tests = checker.run_tests(filename)
     console.print(tests)
+    return tests
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1])

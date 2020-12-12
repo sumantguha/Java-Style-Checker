@@ -18,15 +18,24 @@ import 'ace-builds/src-noconflict/ext-language_tools';
 
 function App() {
   const [data, setData] = useState([{}]);
+  const [code, setCode] = useState([{}]);
   const [theme, setTheme] = useState('solarized_dark');
 
-  const handleSubmit = () => {
-    console.log(data);
+  const _handleSubmit = async () => {
+    const response = await fetch('http://localhost:5000/code', {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    return response.json();
   };
 
-  const handleChange = (event) => {
-    const newTheme = event.target.value;
-    setTheme(newTheme);
+  const handleSubmit = async () => {
+    const response = await _handleSubmit();
+    console.log(response.result);
   };
 
   const getValue = (newValue) => {
