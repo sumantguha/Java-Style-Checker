@@ -7,13 +7,13 @@ Usage: (Supports python 3.x)
 Run script with ```python3 style_checker.py <PATH_TO_JAVA_FILE>``` to view
 console output with list of code quality errors.
 Refer to https://courses.cs.washington.edu/courses/cse142/20au/quality.html
-for a comprehensive list of features. Should be run in the same module as
-style.py and constant.py
+for a comprehensive list of features.
 
 To instansiate CSE142Checker object run:
 checker = CSE142Checker(<path to file>)
 
 TODO: Write Tests
+TODO: Variable name AND small snippet for each error (attach to return three things)
 
 Features to add:
 * long line checking for line with comments at the end
@@ -21,11 +21,13 @@ Features to add:
 * Naming conventions
     * Variable naming conventions
     * PascalCasing
-    * camelCasing
-    * non-descriptive variable names
+* Non-Private fields
+* Indentation
+* Lines ending in whitespace
+* camelCasing Breaks with constructor
 
-authors: Omar, Sumant
-emails: oibra@uw.edu, guhas2@uw.edu
+authors: Omar, Sumant, Aidan
+emails: oibra@uw.edu, guhas2@uw.edu, thalea@uw.edu
 """
 import re
 import sys
@@ -54,10 +56,10 @@ DEBUG = False
 BLANK_PRINTLNS = re.compile(r'System\.out\.println[\s]*\(""\)')
 BOOLEAN_TRUE = re.compile(r'(.*)==( *)true(.*)')
 BOOLEAN_FALSE = re.compile(r'(.*)==( *)false(.*)')
-BREAK = re.compile(r'break.*;')
-CONTINUE = re.compile(r'continue.*;')
-CATCH = re.compile(r'catch.*{')
-VAR = re.compile(r'var.*;')
+BREAK = re.compile(r'break[\s]*;')
+CONTINUE = re.compile(r'continue[\s]*;')
+CATCH = re.compile(r'catch[\s]*\(.*\){')
+VAR = re.compile(r'var.*=')
 TO_ARRAY = re.compile(r'\.toArray.*')
 STRING_BUILDER = re.compile(r'StringBuilder.*')
 STRING_BUFFER = re.compile(r'StringBuffer')
@@ -79,6 +81,7 @@ ARRAYS_SORT = re.compile(r'Arrays\.sort')
 COLLECTIONS_COPY = re.compile(r'Collections\.copy')
 COLLECTIONS_SORT = re.compile(r'Collections\.sort')
 BACKSLASH_N = re.compile(r'\\n')
+BACKSLASH_N_CORRECT = re.compile(r'printf\(\'|\".*\\n\'|\"\)')
 CAMEL_CASING = re.compile(r'(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])')
 
 _checks = {'visible': {}, 'private': {}}
@@ -175,7 +178,8 @@ def check_multiplestatements(visible):
 @add_check
 def check_backslashn(visible):
     """checks for backslash n on a line"""
-    match = BACKSLASH_N.search(visible) and 'printf' not in visible
+    match = BACKSLASH_N.search(
+        visible) and not BACKSLASH_N_CORRECT.search(visible)
     key = '\\n on line'
     if match:
         return [key, BANK[key]]
@@ -390,15 +394,20 @@ def check_camelcasing(visible):
     key = 'Incorrect camel casing'
     if params is not None:
         vars = []
-        params = params[3:-1]
-        vars.append(params[0].split('(')[-1])
-        for p in params[1:-1]:
-            p = p.replace(',', '')
-            vars.append(p)
-        vars.append(params[-1].split(')')[0])
-        for _type, _name in _pairwise(vars):
-            if _name.isalpha() and not _camelHelper(_name):
-                return [key, BANK[key]]
+        params = params[2:-1]
+        # print(params)
+        if params:
+            vars.append(params[0].split('(')[-1])
+            for p in params[1:-1]:
+                p = p.replace(',', '')
+                vars.append(p)
+            vars.append(params[-1].split(')')[0])
+            if 'throws' in vars:
+                idx = vars.index('throws')
+                vars = vars[:idx]
+            for _type, _name in _pairwise(vars):
+                if _name.isalpha() and not _camelHelper(_name):
+                    return [key, BANK[key]]
 
     if name is not None:
         name = name.replace(';', '')
@@ -417,17 +426,22 @@ def check_nondescriptivevariables(visible):
     if params is not None:
         vars = []
         params = params[3:-1]
-        vars.append(params[0].split('(')[-1])
-        for p in params[1:-1]:
-            p = p.replace(',', '')
-            vars.append(p)
-        vars.append(params[-1].split(')')[0])
-        for _type, _name in _pairwise(vars):
-            if _name.isalpha() and not _nameHelper(_type, True, _name):
-                return [key, BANK[key]]
+        if params:
+            vars.append(params[0].split('(')[-1])
+            for p in params[1:-1]:
+                p = p.replace(',', '')
+                vars.append(p)
+            vars.append(params[-1].split(')')[0])
+            if 'throws' in vars:
+                idx = vars.index('throws')
+                vars = vars[:idx]
+            for _type, _name in _pairwise(vars):
+                if _name.isalpha() and not _nameHelper(_type, True, _name):
+                    return [key, BANK[key]]
 
     if name is not None:
         name = name.replace(';', '')
+        type = type.replace('(', '')
         if name.isalpha() and not _nameHelper(type, isVariable, name):
             return [key, BANK[key]]
 
@@ -443,18 +457,18 @@ def _nameHelper(type, isVariable, name):
     if isVariable:
         if type == 'Graphics' and name == 'g':
             return True
-        elif ((type == 'int' or type == 'double') and (
+        if ((type == 'int' or type == 'double') and (
                 name == 'x' or name == 'y')):
             return True
-        elif type == 'int' and (name == 'i' or name == 'j' or name == 'k'):
+        if type == 'int' and (name == 'i' or name == 'j' or name == 'k'):
             return True
-        elif type == 'Random' and name == 'r':
+        if type == 'Random' and name == 'r':
             return True
-        elif type == 'File' and name == 'f':
+        if type == 'File' and name == 'f':
             return True
-        elif type == 'int[]' and (name == 'a' or name == 'b'):
+        if type == 'int[]' and (name == 'a' or name == 'b'):
             return True
-        elif type == 'DrawingPanel' and name == 'p':
+        if type == 'DrawingPanel' and name == 'p':
             return True
 
     if len(name) < 2:
@@ -502,12 +516,13 @@ def _getProperties(visible):
         name = split[idx - 1]
         type = split[idx - 2]
     elif 'public' in visible or 'private' in visible or 'protected' in visible:
-        if 'static' in visible:
-            name = split[3].split('(')[0]
-            type = split[2]
-        else:
-            name = split[2].split('(')[0]
-            type = split[1]
+        if not '@' in visible:
+            if 'static' in visible:
+                name = split[3].split('(')[0]
+                type = split[2]
+            else:
+                name = split[2].split('(')[0]
+                type = split[1]
 
         params = split
 
@@ -664,7 +679,9 @@ class CodeQualityChecker:
         result = checker.check_all(expected=expected, mode=self.mode)
 
         if not result:
-            return '\tLooks Good!\n'
+            return '\t😀👍 [red]L[/red][orange1]o[/orange1][yellow]o[/yellow]' + \
+                '[green]k[/green][blue]s[/blue] [purple]G[/purple][blue]o[/blue]' + \
+                '[green]o[/green][yellow]d[/yellow][orange1]![/orange1]\n'
         return result
 
     def get_checks(self, category):
@@ -750,10 +767,10 @@ class GenerateReport:
                 linenum = ''
 
             if category.startswith('[FORBIDDEN]'):
-                s = f"\t{index}. [bold red]{category}[/bold red] on " + \
+                s = f"{index}. [bold red]{category}[/bold red] on " + \
                     f"{phrase} {linenum}"
             else:
-                s = f"\t{index}. [bold yellow]{category}[/bold yellow] on " + \
+                s = f"{index}. [bold yellow]{category}[/bold yellow] on " + \
                     f"{phrase} {linenum}"
 
             errors = ''.join([errors, s])
@@ -765,7 +782,7 @@ class GenerateReport:
                     count = NUM_RANDOM
                 errors = ''.join(
                     [errors, f' [Total Count = {count}]\n'])
-                message = f"\tTA Note: {self.messages[category]}\n"
+                message = f"TA Note: {self.messages[category]}\n"
                 errors = ''.join([errors, message])
             errors += '\n'
             index += 1
@@ -774,17 +791,17 @@ class GenerateReport:
             errors += '[bold blue]Statistics:[/bold blue] \n'
             if self.total:
                 errors = ''.join(
-                    [errors, f'\tTotal Lines Checked: {self.total}\n'])
-            errors = ''.join([errors, f'\tTotal Errors: {self.get_count()}\n'])
+                    [errors, f'Total Lines Checked: {self.total}\n'])
+            errors = ''.join([errors, f'Total Errors: {self.get_count()}\n'])
             errors = ''.join(
-                [errors, f'\tUnique Errors: {self.get_unique()}\n'])
+                [errors, f'Unique Errors: {self.get_unique()}\n'])
 
             if len(forbidden) == 0:
                 errors = ''.join(
-                    [errors, f'\t(Unique) Forbidden Features: {len(forbidden)}\n'])
+                    [errors, f'Unique Forbidden Features: {len(forbidden)}\n'])
             else:
                 errors = ''.join(
-                    [errors, f'\t[red](Unique) Forbidden Features:[/red] {len(forbidden)}\n'])
+                    [errors, f'[red]Unique Forbidden Features:[/red] {len(forbidden)}\n'])
 
         return errors
 
@@ -806,107 +823,107 @@ def readlines(filename):
 # Annotation Bank
 BANK = {
     'Long lines': 'Lines of code should ideally max out at 80 characters, \n' +
-    '\tand should [italic]never[/italic] exceed 100 characters in length. Lines that \n' +
-    '\tare too long should be broken up and wrapped to the next line.',
+    'and should [italic]never[/italic] exceed 100 characters in length. Lines that \n' +
+    'are too long should be broken up and wrapped to the next line.',
 
     'Blank println statements': 'A blank println should actually be blank. \n' +
-    f'\tYou should always print a blank line using [bold]System.out.println()[/bold]. Printing \n' +
-    '\tan empty String with System.out.println("") is considered bad style; it makes\n' +
-    '\tthe intention less clear.',
+    f'You should always print a blank line using [bold]System.out.println()[/bold]. Printing \n' +
+    'an empty String with System.out.println("") is considered bad style; it makes\n' +
+    'the intention less clear.',
 
     'Bad boolean zen ( == true) ': 'You should never test booleans for equality, \n' +
-    '\tyou should just use x itself as a condition',
+    'you should just use x itself as a condition',
 
     'Bad boolean zen ( == false)': 'You should never test booleans for equality, \n' +
-    '\tyou should just use !x itself as a condition',
+    'you should just use !x itself as a condition',
 
     'Multiple console scanners': 'There should be one Scanner per source. It\'s best\n' +
-    '\tpractice to only have one Scanner',
+    'practice to only have one Scanner',
 
     'Multiple random objects': 'There should be one Random per file. It\'s best practice\n' +
-    '\tto only have one Random object created, and pass that Random around to anywhere that\n' +
-    '\tneeds it.',
+    'to only have one Random object created, and pass that Random around to anywhere that\n' +
+    'needs it.',
 
     '\\n on line': '\\n should only be used in printf. It\'s best practice\n' +
-    '\tYou should just use println if you want to print a full line.',
+    'You should just use println if you want to print a full line.',
 
     'Multiple statements per line': 'There is more than one statement on this line. It\'s best\n' +
-    '\tpractice to limit your code to one statement per line',
+    'practice to limit your code to one statement per line',
 
     'Non-Private fields': 'Fields should be private. This ensures that no client of your object will\n' +
-    '\t be able to directly change the state of your object in a way that you haven’t allowed them to',
+    ' be able to directly change the state of your object in a way that you haven’t allowed them to',
 
     '[FORBIDDEN] Break': 'Break is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed to use it in \n' +
-    '\tCSE14x. Considering exiting a loop with a different conditional structure',
+    'CSE14x. Considering exiting a loop with a different conditional structure',
 
     '[FORBIDDEN] Continue': 'Continue is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed to use \n' +
-    '\tit in CSE14x. Considering using a different conditional structure',
+    'it in CSE14x. Considering using a different conditional structure',
 
     '[FORBIDDEN] Try/Catch': 'Try/Catch is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed \n' +
-    '\tto use it in CSE14x. Consider throwing Exceptions instead',
+    'to use it in CSE14x. Consider throwing Exceptions instead',
 
     '[FORBIDDEN] Var': 'Var is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed \n' +
-    '\tto use it in CSE14x. Declare typed variables instead',
+    'to use it in CSE14x. Declare typed variables instead',
 
     '[FORBIDDEN] .toArray': '.toArray is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed \n' +
-    '\tto use it in CSE14x. Convert to arrays manually',
+    'to use it in CSE14x. Convert to arrays manually',
 
     '[FORBIDDEN] StringBuilder': 'StringBuilder is a [bold]forbidden[/bold] feature. You are \n' +
-    '\t[italic]not[/italic] allowed to use it in CSE14x. Consider using String concatenation',
+    '[italic]not[/italic] allowed to use it in CSE14x. Consider using String concatenation',
 
     '[FORBIDDEN] StringBuffer': 'StringBuffer is a [bold]forbidden[/bold] feature. You are \n' +
-    '\t[italic]not[/italic] allowed to use it in CSE14x. Consider using simple immutable String',
+    '[italic]not[/italic] allowed to use it in CSE14x. Consider using simple immutable String',
 
     '[FORBIDDEN] StringJoiner': 'StringJoiner is a [bold]forbidden[/bold] feature. You are \n' +
-    '\t[italic]not[/italic] allowed to use it in CSE14x. Consider using String concatenation',
+    '[italic]not[/italic] allowed to use it in CSE14x. Consider using String concatenation',
 
     '[FORBIDDEN] StringTokenizer': 'StringJoiner is a [bold]forbidden[/bold] feature. You are \n' +
-    '\t[italic]not[/italic] allowed to use it in CSE14x. [italic]Not[/italic] sure why you are using this in 142 :)',
+    '[italic]not[/italic] allowed to use it in CSE14x. [italic]Not[/italic] sure why you are using this in 142 :)',
 
     '[FORBIDDEN] .toCharArray': '.toCharArray is a [bold]forbidden[/bold] feature. You are \n' +
-    '\t[italic]not[/italic] allowed to use it in CSE14x. You should build up arrays manually _if_ necessary',
+    '[italic]not[/italic] allowed to use it in CSE14x. You should build up arrays manually _if_ necessary',
 
     '[FORBIDDEN] FileReader': 'FileReader is a [bold]forbidden[/bold] feature. You are \n' +
-    '\t[italic]not[/italic] allowed to use it in CSE14x. You should use Scanners to read file input',
+    '[italic]not[/italic] allowed to use it in CSE14x. You should use Scanners to read file input',
 
     '[FORBIDDEN] BufferedReader': 'BufferedReader is a [bold]forbidden[/bold] feature. You are \n' +
-    '\t[italic]not[/italic] allowed to use it in CSE14x. You should use Scanners to read file input',
+    '[italic]not[/italic] allowed to use it in CSE14x. You should use Scanners to read file input',
 
     '[FORBIDDEN] FileWriter': 'FileWriter is a [bold]forbidden[/bold] feature. You are \n' +
-    '\t[italic]not[/italic] allowed to use it in CSE14x. You should use PrintStreams to write file output',
+    '[italic]not[/italic] allowed to use it in CSE14x. You should use PrintStreams to write file output',
 
     '[FORBIDDEN] String.join()': 'String.join() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic] allowed\n' +
-    '\tto use it in CSE14x. Considering using String concatenation instead',
+    'to use it in CSE14x. Considering using String concatenation instead',
 
     '[FORBIDDEN] String.matches()': 'String.join() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
-    '\tallowed to use it in CSE14x. You should not use regex!',
+    'allowed to use it in CSE14x. You should not use regex!',
 
     '[FORBIDDEN] Arrays.asList()': 'Arrays.asList() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
-    '\tallowed to use it in CSE142. You should not use ArrayList<E>',
+    'allowed to use it in CSE142. You should not use ArrayList<E>',
 
     '[FORBIDDEN] Arrays.copyOf()': 'Arrays.copyOf() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
-    '\tallowed to use it in CSE142. You should not use ArrayList<E>',
+    'allowed to use it in CSE142. You should not use ArrayList<E>',
 
     '[FORBIDDEN] Arrays.copyOfRange()': 'Arrays.copyOfRange() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
-    '\tallowed to use it in CSE142. You should not use ArrayList<E>',
+    'allowed to use it in CSE142. You should not use ArrayList<E>',
 
     '[FORBIDDEN] Arrays.sort()': 'Arrays.sort() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
-    '\tallowed to use it in CSE142. Sort arrays manually [italic]if[/italic] necessary',
+    'allowed to use it in CSE142. Sort arrays manually [italic]if[/italic] necessary',
 
     '[FORBIDDEN] Arrays.fill()': 'Arrays.fill() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
-    '\tallowed to use it in CSE142. Fill arrays manually [italic]if[/italic] necessary',
+    'allowed to use it in CSE142. Fill arrays manually [italic]if[/italic] necessary',
 
     '[FORBIDDEN] Collections.copy()': 'Collections.copy() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
-    '\tallowed to use it in CSE142. Copy collections manually [italic]if[/italic] necessary',
+    'allowed to use it in CSE142. Copy collections manually [italic]if[/italic] necessary',
 
     '[FORBIDDEN] Collections.sort()': 'Collections.sort() is a [bold]forbidden[/bold] feature. You are [italic]not[/italic]\n' +
-    '\tallowed to use it in CSE142. Sort collections manually [italic]if[/italic] necessary',
+    'allowed to use it in CSE142. Sort collections manually [italic]if[/italic] necessary',
 
     'Incorrect camel casing': 'This name has the wrong naming conventions (should be camelCased). It\'s best practice\n' +
-    '\tto have all identifier names camelCased by having all words after the first start with an uppercase letter',
+    'to have all identifier names camelCased by having all words after the first start with an uppercase letter',
 
     'Non-Descriptive variable name': 'This name is not descriptive. It\'s best practice\n' +
-    '\tto have all identifier names specify what they do'
+    'to have all identifier names specify what they do',
 
 }
 
@@ -936,9 +953,14 @@ sys.excepthook = exit_on_error
 
 def main():
     print()
+    try:
+        for n in track(range(n), description="Processing..."):
+            sleep(0.5)
+    except:
+        pass
     console.rule('CSE 142 Code Quality Checker')
     checker = CodeQualityChecker(
-        mode='private', verbose=True, debug=True)
+        mode='private', verbose=True, debug=False)
     tests = checker.run_tests(sys.argv[1])
     console.print(tests)
 

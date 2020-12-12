@@ -13,7 +13,8 @@ public class Test {
     public static boolean test(Graphics attone) {
         int loremIPsum = 10;
         PrintStream output = new PrintStream();
-        z++;
+        int z = 20;
+        break;
         
         Direction[] directions = {Direction.CENTER, Direction.EAST, 
                 Direction.WEST, Direction.NORTH}
