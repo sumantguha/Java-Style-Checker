@@ -1,16 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;700;800&display=swap');
 
 .button {
-  position: absolute;
   border: none;
   background-color: #f76c6c;
   border-color: #f76c6c;
-  width: 750px;
+  width: 85%;
   vertical-align: middle;
   padding-top: 1%;
   transition: 0.3s;
-  margin-top: 1.5%;
-  left: 5%;
+  height: 6vh;
 }
 
 .button:hover {
@@ -18,7 +16,11 @@
 }
 
 .button:active {
-  background-color: blue;
+  background-color: #f8e9a1;
+}
+
+.button:active h4 {
+  color: #112d32;
 }
 
 .content-info {
@@ -28,4 +30,8 @@
   font-weight: 800;
   font-size: 1.5rem;
   letter-spacing: 0.2rem;
+}
+
+.pre {
+  color: blue;
 }

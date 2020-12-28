@@ -1,7 +1,8 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request
 from flask_cors import CORS
 import importlib
 import importlib.util
+import json
 
 
 def module_from_file(module_name, file_path):
@@ -18,6 +19,13 @@ app = Flask(__name__)
 CORS(app)
 
 
+class SetEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        return json.JSONEncoder.default(self, obj)
+
+
 @app.route('/code', methods=['GET', 'POST'])
 def result():
     if request.json:
@@ -26,5 +34,6 @@ def result():
             file.write(str(content))
         tests = checker.main('student_file.java',
                              mode='web', verbose=True, debug=False)
-        return jsonify(result=str(tests))
+
+        return json.dumps(tests, cls=SetEncoder)
     return "No code"

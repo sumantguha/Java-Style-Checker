@@ -578,7 +578,7 @@ class CSE142Checker:
             result = self.run_checks(check, categories)
             if result is not None:
                 (info, message) = result
-                self.report_error(self.line_number, info, message, check)
+                self.report_error(self.line_number, info, message, check, line)
 
     def report_private_results(self, line):
         """Reports check results for private tests"""
@@ -587,7 +587,7 @@ class CSE142Checker:
             result = self.run_checks(check, categories)
             if result is not None:
                 (info, message) = result
-                self.report_error(self.line_number, info, message, check)
+                self.report_error(self.line_number, info, message, check, line)
 
     def run_checks(self, check, categories):
         """Runs all checks"""
@@ -709,6 +709,7 @@ class GenerateReport:
         self.verbose = verbose
         self.total = total
         self.mode = mode
+        self.lineContent = {}
 
     def init_file(self, filename, expected):
         """Constructs a new file"""
@@ -716,7 +717,7 @@ class GenerateReport:
         self.expected = expected or 'Passed!'
         self.file_errors = 0
 
-    def error(self, line_num, info, message, check):
+    def error(self, line_num, info, message, check, line):
         """Report an error with options"""
         if info in self.categories:
             self.categories[info] += 1
@@ -725,6 +726,8 @@ class GenerateReport:
             self.categories[info] = 1
             self.messages[info] = message
             self.lines[info] = [line_num]
+
+        self.lineContent[line_num] = line
 
         self.file_errors += 1
 
@@ -765,10 +768,10 @@ class GenerateReport:
             formatted_categories = re.sub(
                 '\\n', ' ', formatted_categories)
             if self.mode == 'web':
-                web_errors.append([
-                    category, self.lines[category], {
-                        count}, formatted_categories
-                ])
+                for index, line in enumerate(self.lines[category]):
+                    web_errors.append([
+                        category, line, count, formatted_categories, self.lineContent[line]
+                    ])
 
                 continue
 
@@ -821,7 +824,7 @@ class GenerateReport:
                 errors = ''.join(
                     [errors, f'[red]Unique Forbidden Features:[/red] {len(forbidden)}\n'])
         if self.mode == 'web':
-            return web_errors
+            return sorted(web_errors, key=lambda x: x[1])
         return errors
 
 
