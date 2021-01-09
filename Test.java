@@ -10,6 +10,7 @@ public class Test {
         int x = 10;
         x++;
         Graphics g = panel.graphics();
+        break;
     }
 
     public static boolean test(Graphics attone) {
@@ -17,14 +18,11 @@ public class Test {
         PrintStream output = new PrintStream();
         int z = 20;
         break;
-        
-        Direction[] directions = {Direction.CENTER, Direction.EAST, 
-                Direction.WEST, Direction.NORTH}
+
+        // Direction[] directions = {Direction.CENTER, Direction.EAST, Direction.WEST,
+        // Direction.NORTH}
 
         System.out.println(name + ": " + Arrays.toString(x) + " = " + type);
     }
 
-    // public static int a(int x) {
-    // return 10;
-    // }
 }

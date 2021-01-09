@@ -552,6 +552,7 @@ class CSE142Checker:
         self.private = checks['private']
         self.single_comment = False
         self.multi_comment = False
+        self.indent_level = 0
 
     def check_file(self, filename):
         """Checks valdity of input file"""
@@ -623,6 +624,25 @@ class CSE142Checker:
         if mode == 'private':
             self.report_private_results(line)
 
+    def check_indentation(self, line):
+        correct_spaces = ' ' * (self.indent_level *
+                                self.tab_size) + line.strip()
+        correct_tab = '\t' * self.indent_level + line.strip()
+
+        while line and line[len(line) - 1] == ' ':
+            line = line[: len(line) - 1]
+
+        if not line.strip():
+            return 0
+
+        if len(correct_spaces) > len(line) - 1 and len(correct_tab) > len(line) - 1:
+            print(line)
+            return 2
+        elif len(correct_spaces) < len(line) - 1 and len(correct_tab) < len(line) - 1:
+            return 1
+        else:
+            return 0
+
     def check_all(self, expected=None, mode='visible'):
         """ Run tests on file and return the the list of errors"""
         self.report.init_file(self.filename, expected)
@@ -631,6 +651,27 @@ class CSE142Checker:
         while line:
             self.single_comment = False
             line = self.handle_comments(line)
+
+            if '}' in line:
+                self.indent_level -= 1
+
+            indent = self.check_indentation(line)
+            if indent and not self.multi_comment:
+                if indent == 2:
+                    self.report_error(self.line_number,
+                                      "Incorrect Indentation", "TA Note: This line is underindented. " +
+                                      "You should indent your program one tab further every time you open a" +
+                                      "curly brace and indent one tab less every time you close a curly brace." +
+                                      "This line should be indented more. Use the Indenter Tool", None, line)
+                else:  # indent is 1
+                    self.report_error(self.line_number,
+                                      "Incorrect Indentation", "TA Note: This line is overindented. " +
+                                      "You should indent your program one tab further every time you open a" +
+                                      "curly brace and indent one tab less every time you close a curly brace." +
+                                      "This line should be indented less. Use the Indenter Tool", None, line)
+
+            if '{' in line:
+                self.indent_level += 1
 
             if not self.single_comment and not self.multi_comment:
                 self.display_results(line, mode)
@@ -647,7 +688,7 @@ class CodeQualityChecker:
     def __init__(self, *args, **kwargs):
         self.checker_class = CSE142Checker
         self.verbose = kwargs.pop('verbose', False)
-        self.tab_size = kwargs.pop('tab_size', 4)
+        self.tab_size = kwargs.pop('tabsize', 4)
         self.max_line_length = kwargs.pop('max_line_length', 100)
         self.mode = kwargs.pop('mode', 'visible')
         self.report = GenerateReport(verbose=self.verbose, mode=self.mode)
@@ -973,17 +1014,20 @@ def exit_on_error(exctype, value, tb):
 sys.excepthook = exit_on_error
 
 
-def main(filename, mode, verbose, debug):
+def main(filename, mode, verbose, debug, tabsize):
     print()
     if mode != 'web':
         console.rule('CSE 142 Code Quality Checker')
-    checker = CodeQualityChecker(mode=mode, verbose=verbose, debug=debug)
+    checker = CodeQualityChecker(
+        mode=mode, verbose=verbose, debug=debug, tabsize=tabsize)
     tests = checker.run_tests(filename)
     if mode == 'web':
+        console.print(tests)
         return tests
     else:
         console.print(tests)
 
 
 if __name__ == '__main__':
-    main(filename=sys.argv[1], mode='web', verbose=True, debug=False)
+    main(filename=sys.argv[1], mode=sys.argv[2],
+         verbose=bool(sys.argv[3]), debug=bool(sys.argv[4]), tabsize=int(sys.argv[5]))

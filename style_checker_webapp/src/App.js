@@ -1,9 +1,9 @@
 import React, {useState, useEffect, useRef} from 'react';
 import SubmitButton from './Components/Button';
-import RadioButton from './Components/RadioButton';
+// import RadioButton from './Components/RadioButton';
 import './App.css';
 import AceEditor from 'react-ace';
-import {Modal, Button} from 'react-bootstrap';
+import {Modal} from 'react-bootstrap';
 import 'ace-builds/src-noconflict/mode-java';
 import 'ace-builds/src-noconflict/theme-github';
 import 'ace-builds/src-noconflict/theme-monokai';
@@ -19,7 +19,26 @@ import 'ace-builds/src-noconflict/ext-language_tools';
 import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
 import {nord} from 'react-syntax-highlighter/dist/esm/styles/prism';
 
-function App() {
+import {
+  ChakraProvider,
+  Box,
+  Heading,
+  Text,
+  Flex,
+  Button,
+  extendTheme,
+  NumberInput,
+  NumberInputField,
+} from '@chakra-ui/react';
+
+const config = {
+  useSystemColorMode: false,
+  initialColorMode: 'light',
+};
+
+const lightMode = extendTheme({config});
+
+const App = () => {
   const [data, setData] = useState(null);
   const [didSubmit, setDidSubmit] = useState(false);
   const [theme, setTheme] = useState('solarized_dark');
@@ -31,7 +50,10 @@ function App() {
 
   const [modalShow, setModalShow] = useState(false);
 
+  const {width, height} = useWindowDimensions();
+
   const _handleSubmit = async () => {
+    console.log(data);
     const response = await fetch('http://localhost:5000/code', {
       method: 'POST',
       mode: 'cors',
@@ -53,126 +75,157 @@ function App() {
     setData(newValue);
   };
 
+  const ButtonGroup = (props) => {
+    return (
+      <Box>Hello</Box>
+      // <Box {...props}>
+      //   <RadioButton
+      //     changed={(event) => {
+      //       setTheme(event.target.value);
+      //     }}
+      //     id='1'
+      //     isSelected={theme === 'monokai'}
+      //     label='Monokai'
+      //     value='monokai'
+      //   />
+
+      //   <RadioButton
+      //     changed={(event) => {
+      //       setTheme(event.target.value);
+      //     }}
+      //     id='2'
+      //     isSelected={theme === 'github'}
+      //     label='GitHub'
+      //     value='github'
+      //   />
+      //   <RadioButton
+      //     changed={(event) => {
+      //       setTheme(event.target.value);
+      //     }}
+      //     id='3'
+      //     isSelected={theme === 'tomorrow'}
+      //     label='Tomorrow'
+      //     value='tomorrow'
+      //   />
+      //   <RadioButton
+      //     changed={(event) => {
+      //       setTheme(event.target.value);
+      //     }}
+      //     id='4'
+      //     isSelected={theme === 'kuroir'}
+      //     label='Kuroir'
+      //     value='kuroir'
+      //   />
+      //   <RadioButton
+      //     changed={(event) => {
+      //       setTheme(event.target.value);
+      //     }}
+      //     id='5'
+      //     isSelected={theme === 'twilight'}
+      //     label='Twilight'
+      //     value='twilight'
+      //   />
+      //   <RadioButton
+      //     changed={(event) => {
+      //       setTheme(event.target.value);
+      //     }}
+      //     id='6'
+      //     isSelected={theme === 'xcode'}
+      //     label='Xcode'
+      //     value='xcode'
+      //   />
+      //   <RadioButton
+      //     changed={(event) => {
+      //       setTheme(event.target.value);
+      //     }}
+      //     id='7'
+      //     isSelected={theme === 'textmate'}
+      //     label='Textmate'
+      //     value='textmate'
+      //   />
+      //   <RadioButton
+      //     changed={(event) => {
+      //       setTheme(event.target.value);
+      //     }}
+      //     id='8'
+      //     isSelected={theme === 'solarized_dark'}
+      //     label='Solarized Dark'
+      //     value='solarized_dark'
+      //   />
+      //   <RadioButton
+      //     changed={(event) => {
+      //       setTheme(event.target.value);
+      //     }}
+      //     id='9'
+      //     isSelected={theme === 'solarized_light'}
+      //     label='Solarized Light'
+      //     value='solarized_light'
+      //   />
+      //   <RadioButton
+      //     changed={(event) => {
+      //       setTheme(event.target.value);
+      //     }}
+      //     id='10'
+      //     isSelected={theme === 'terminal'}
+      //     label='Terminal'
+      //     value='terminal'
+      //   />
+      // </Box>
+    );
+  };
+
   return (
-    <div className='App'>
-      <div className='header'>
-        <h1>CSE 142 Code Quality Checker</h1>
-        <Button variant='info' onClick={() => setModalShow(true)}>
-          Help
-        </Button>
-      </div>
-      <div className='buttons'>
-        <RadioButton
-          changed={(event) => {
-            setTheme(event.target.value);
-          }}
-          id='1'
-          isSelected={theme === 'monokai'}
-          label='Monokai'
-          value='monokai'
+    <ChakraProvider theme={lightMode}>
+      <Box
+        w='100%'
+        bg='white'
+        color='gray.900'
+        display='flex'
+        pb={10}
+        flexDirection='column'>
+        <Flex
+          maxH='5vh'
+          ml={20}
+          mr={20}
+          mt={10}
+          justifyContent='space-between'
+          alignItems='center'>
+          <Heading fontWeight='700' fontSize='2xl'>
+            CSE 14x Code Quality Checker
+          </Heading>
+          <Button
+            variant='solid'
+            colorScheme='blue'
+            onClick={() => setModalShow(true)}>
+            Help
+          </Button>
+        </Flex>
+        <ButtonGroup
+          marginTop={5}
+          display='flex'
+          flexDirection='row'
+          justifyContent='space-around'
+          mx='auto'
         />
-
-        <RadioButton
-          changed={(event) => {
-            setTheme(event.target.value);
-          }}
-          id='2'
-          isSelected={theme === 'github'}
-          label='GitHub'
-          value='github'
-        />
-        <RadioButton
-          changed={(event) => {
-            setTheme(event.target.value);
-          }}
-          id='3'
-          isSelected={theme === 'tomorrow'}
-          label='Tomorrow'
-          value='tomorrow'
-        />
-        <RadioButton
-          changed={(event) => {
-            setTheme(event.target.value);
-          }}
-          id='4'
-          isSelected={theme === 'kuroir'}
-          label='Kuroir'
-          value='kuroir'
-        />
-        <RadioButton
-          changed={(event) => {
-            setTheme(event.target.value);
-          }}
-          id='5'
-          isSelected={theme === 'twilight'}
-          label='Twilight'
-          value='twilight'
-        />
-        <RadioButton
-          changed={(event) => {
-            setTheme(event.target.value);
-          }}
-          id='6'
-          isSelected={theme === 'xcode'}
-          label='Xcode'
-          value='xcode'
-        />
-        <RadioButton
-          changed={(event) => {
-            setTheme(event.target.value);
-          }}
-          id='7'
-          isSelected={theme === 'textmate'}
-          label='Textmate'
-          value='textmate'
-        />
-        <RadioButton
-          changed={(event) => {
-            setTheme(event.target.value);
-          }}
-          id='8'
-          isSelected={theme === 'solarized_dark'}
-          label='Solarized Dark'
-          value='solarized_dark'
-        />
-        <RadioButton
-          changed={(event) => {
-            setTheme(event.target.value);
-          }}
-          id='9'
-          isSelected={theme === 'solarized_light'}
-          label='Solarized Light'
-          value='solarized_light'
-        />
-        <RadioButton
-          changed={(event) => {
-            setTheme(event.target.value);
-          }}
-          id='10'
-          isSelected={theme === 'terminal'}
-          label='Terminal'
-          value='terminal'
-        />
-      </div>
-
-      <div className='main'>
-        <AceEditor
-          className='codeBlock'
-          mode='java'
-          theme={theme}
-          setOptions={{
-            enableBasicAutocompletion: true,
-            enableLiveAutocompletion: true,
-            enableSnippets: true,
-          }}
-          fontSize={16}
-          defaultValue=''
-          height='65vh'
-          width='750px'
-          onChange={getValue}
-          placeholder="Paste your program's source code here..."
-        />
-        <div className='bottom'>
+        <Box mt={5} ml={20} maxH='70vh'>
+          <AceEditor
+            mode='java'
+            theme={theme}
+            setOptions={{
+              enableBasicAutocompletion: true,
+              enableLiveAutocompletion: true,
+              enableSnippets: true,
+              showPrintMargin: false,
+            }}
+            fontSize={16}
+            // defaultValue=''
+            height='70vh'
+            width={width - 200}
+            onChange={getValue}
+            placeholder="Paste your program's source code here..."
+          />
+        </Box>
+        <Flex ml={20} mt={5} maxW={width - 220}>
           <SubmitButton
             content='Check'
             onClick={() => {
@@ -184,25 +237,60 @@ function App() {
               }
             }}
           />
-          <input
-            type='text'
-            placeholder='Tab Size'
-            id='tabsize'
-            onChange={(e) => setTabSize(+e.target.value)}
-          />
+          <Box>
+            <NumberInput color='white'>
+              <NumberInputField
+                defaultValue={4}
+                h='7vh'
+                ml={5}
+                bg='#f76c6c'
+                textAlign='center'
+                color='white'
+                placeholder='Tab Size'
+                borderRadius={10}
+                id='tabsize'
+                onChange={(e) => setTabSize(+e.target.value)}
+              />
+            </NumberInput>
+          </Box>
+        </Flex>
+      </Box>
+      {/*
+
+        <div className='main'>
+          
+          <div className='bottom'>
+            <SubmitButton
+              content='Check'
+              onClick={() => {
+                setDidSubmit(true);
+                if (scrollToRef && scrollToRef.current) {
+                  scrollToRef.current.scrollIntoView({
+                    behavior: 'smooth',
+                  });
+                }
+              }}
+            />
+            <input
+              type='text'
+              placeholder='Tab Size'
+              id='tabsize'
+              onChange={(e) => setTabSize(+e.target.value)}
+            />
+          </div>
         </div>
-      </div>
 
-      {errors && <Result errors={errors} scrollToRef={scrollToRef}></Result>}
+        {errors && <Result errors={errors} scrollToRef={scrollToRef}></Result>}
 
-      <div className='footer'>
-        <h4>© cse142 2020</h4>
-      </div>
+        <div className='footer'>
+          <h4>© cse142 2020</h4>
+        </div>
 
-      <HelpModal show={modalShow} onHide={() => setModalShow(false)} />
-    </div>
+        <HelpModal show={modalShow} onHide={() => setModalShow(false)} />
+      </Box> */}
+    </ChakraProvider>
   );
-}
+};
 
 const HelpModal = (props) => {
   return (
@@ -289,6 +377,31 @@ const Card = ({category, line_num, times, message, line}) => {
       </div>
     </div>
   );
+};
+
+const getWindowDimensions = () => {
+  const {innerWidth: width, innerHeight: height} = window;
+  return {
+    width,
+    height,
+  };
+};
+
+const useWindowDimensions = () => {
+  const [windowDimensions, setWindowDimensions] = useState(
+    getWindowDimensions()
+  );
+
+  useEffect(() => {
+    function handleResize() {
+      setWindowDimensions(getWindowDimensions());
+    }
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return windowDimensions;
 };
 
 export default App;

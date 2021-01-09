@@ -6,9 +6,11 @@
   border-color: #f76c6c;
   width: 85%;
   vertical-align: middle;
-  padding-top: 1%;
+  height: 7vh;
   transition: 0.3s;
-  height: 6vh;
+  border-radius: 10px;
+  justify-content: center;
+  align-items: center;
 }
 
 .button:hover {

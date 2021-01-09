@@ -1,27 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;700;800&display=swap');
 
-.App {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  font-family: 'Open Sans', sans-serif;
-}
-
-.header {
-  height: 10vh;
-  background-color: #112d32;
-  display: flex;
-  flex-direction: row;
-  text-align: center;
-  justify-content: center;
-  align-items: center;
-}
-
-.header Button {
-  position: absolute;
-  right: 10%;
-}
-
 .header h1 {
   color: white;
   text-transform: uppercase;
@@ -44,15 +22,6 @@
   line-height: 5vh;
   font-size: 1rem;
   font-family: 'Open Sans', sans-serif;
-}
-
-.buttons {
-  position: absolute;
-  margin-top: 6%;
-  margin-left: 5%;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
 }
 
 .main {
@@ -80,7 +49,7 @@
   margin-top: 1.5%;
 }
 
-input {
+/* input {
   width: 10%;
   height: 6vh;
   position: absolute;
@@ -89,7 +58,7 @@ input {
   border: none;
   text-align: center;
   color: black;
-}
+} */
 
 ::placeholder {
   /* Most modern browsers support this now. */

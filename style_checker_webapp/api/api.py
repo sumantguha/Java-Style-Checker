@@ -1,8 +1,19 @@
-from flask import Flask, request
-from flask_cors import CORS
 import importlib
 import importlib.util
 import json
+import subprocess
+import sys
+
+try:
+    from flask import Flask, request
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", 'flask'])
+
+try:
+    from flask_cors import CORS
+except ImportError:
+    subprocess.check_call(
+        [sys.executable, "-m", "pip", "install", 'flask_cors'])
 
 
 def module_from_file(module_name, file_path):
@@ -30,10 +41,10 @@ class SetEncoder(json.JSONEncoder):
 def result():
     if request.json:
         content = request.json
+        print(content)
         with open('student_file.java', 'w') as file:
-            file.write(str(content))
+            file.write(str(content['code']))
         tests = checker.main('student_file.java',
-                             mode='web', verbose=True, debug=False)
-
+                             mode='web', verbose=True, debug=True, tabsize=int(content['tabsize']))
         return json.dumps(tests, cls=SetEncoder)
     return "No code"
