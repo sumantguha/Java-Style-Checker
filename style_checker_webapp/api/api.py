@@ -41,7 +41,6 @@ class SetEncoder(json.JSONEncoder):
 def result():
     if request.json:
         content = request.json
-        print(content)
         with open('student_file.java', 'w') as file:
             file.write(str(content['code']))
         tests = checker.main('student_file.java',

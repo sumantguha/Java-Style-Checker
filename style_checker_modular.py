@@ -4,27 +4,6 @@
 Code quality linter for Java, specifically designed for CSE 142 @ UW, Seattle
 Usage: (Supports python 3.x)
 
-Run script with ```python3 style_checker.py <PATH_TO_JAVA_FILE>``` to view
-console output with list of code quality errors.
-Refer to https://courses.cs.washington.edu/courses/cse142/20au/quality.html
-for a comprehensive list of features.
-
-To instansiate CSE142Checker object run:
-checker = CSE142Checker(<path to file>)
-
-TODO: Write Tests
-TODO: Variable name AND small snippet for each error (attach to return three things)
-
-Features to add:
-* long line checking for line with comments at the end
-* checking in_class or not
-* Naming conventions
-    * Variable naming conventions
-    * PascalCasing
-* Non-Private fields
-* Indentation
-* Lines ending in whitespace
-* camelCasing Breaks with constructor
 
 authors: Omar, Sumant, Aidan
 emails: oibra@uw.edu, guhas2@uw.edu, thalea@uw.edu
@@ -37,10 +16,8 @@ import inspect
 import tokenize
 from configparser import RawConfigParser
 from io import TextIOWrapper
-try:
-    import rich
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", 'rich'])
+import rich
+
 
 from rich.console import Console
 from rich.markdown import Markdown
@@ -411,7 +388,7 @@ def check_camelcasing(visible):
 
     if name is not None:
         name = name.replace(';', '')
-        if '_' in name or (name.isalpha() and not _camelHelper(name)):
+        if '_' in name or not _camelHelper(name):
             return [key, BANK[key]]
 
 
@@ -441,7 +418,8 @@ def check_nondescriptivevariables(visible):
 
     if name is not None:
         name = name.replace(';', '')
-        type = type.replace('(', '')
+        if '(' in type:
+            type = type.split('(')[1]
         if name.isalpha() and not _nameHelper(type, isVariable, name):
             return [key, BANK[key]]
 
@@ -479,7 +457,6 @@ def _nameHelper(type, isVariable, name):
 def _camelHelper(word):
     """helper for checking if a word is camelCased"""
     split = re.split(CAMEL_CASING, word)
-
     if not split[0].islower():
         return False
 
@@ -521,8 +498,9 @@ def _getProperties(visible):
                 name = split[3].split('(')[0]
                 type = split[2]
             else:
-                name = split[2].split('(')[0]
-                type = split[1]
+                if len(split) != 2:
+                    name = split[2].split('(')[0]
+                    type = split[1]
 
         params = split
 
@@ -539,6 +517,7 @@ class CSE142Checker:
         else:
             assert not kwargs
         self.check_file(filename)
+        self.indent_type = options["INDENT_TYPE"]
         self.max_line_length = options["MAX_LINE_LENGTH"]
         self.tab_size = options["TAB_SIZE"]
         self.verbose = options["VERBOSE"]
@@ -625,9 +604,15 @@ class CSE142Checker:
             self.report_private_results(line)
 
     def check_indentation(self, line):
-        correct_spaces = ' ' * (self.indent_level *
-                                self.tab_size) + line.strip()
-        correct_tab = '\t' * self.indent_level + line.strip()
+        if '}' in line:
+            return
+
+        correct = None
+        if self.indent_type.startswith('t'):
+            correct = '\t' * self.indent_level + line.strip()
+        else:
+            correct = ' ' * (self.indent_level *
+                             self.tab_size) + line.strip()
 
         while line and line[len(line) - 1] == ' ':
             line = line[: len(line) - 1]
@@ -635,13 +620,37 @@ class CSE142Checker:
         if not line.strip():
             return 0
 
-        if len(correct_spaces) > len(line) - 1 and len(correct_tab) > len(line) - 1:
-            print(line)
+        if len(correct) > len(line) - 1:
             return 2
-        elif len(correct_spaces) < len(line) - 1 and len(correct_tab) < len(line) - 1:
+        elif len(correct) < len(line) - 1:
             return 1
         else:
             return 0
+
+    def blank(self, line):
+        return line.strip() == '' or '}' in line
+
+    def handle_indentation(self, line):
+        if '}' in line:
+            self.indent_level -= 1
+
+        if self.indent_level == 1 and self.line_number < self.total_lines - 2:
+            if '}' in line:
+                if not self.blank(self.lines[self.line_number]):
+                    self.report_error(self.line_number,
+                                    'Blank Lines Between Methods', BANK['Blank Lines Between Methods'], None, line)
+
+        indent = self.check_indentation(line)
+        if indent and not self.multi_comment:
+            if indent == 2:
+                self.report_error(self.line_number,
+                                  'Under Indentation', BANK['Under Indentation'], None, line)
+            else:  # indent is 1
+                self.report_error(self.line_number,
+                                  'Over Indentation', BANK['Over Indentation'], None, line)
+
+        if '{' in line:
+            self.indent_level += 1
 
     def check_all(self, expected=None, mode='visible'):
         """ Run tests on file and return the the list of errors"""
@@ -652,26 +661,7 @@ class CSE142Checker:
             self.single_comment = False
             line = self.handle_comments(line)
 
-            if '}' in line:
-                self.indent_level -= 1
-
-            indent = self.check_indentation(line)
-            if indent and not self.multi_comment:
-                if indent == 2:
-                    self.report_error(self.line_number,
-                                      "Incorrect Indentation", "TA Note: This line is underindented. " +
-                                      "You should indent your program one tab further every time you open a" +
-                                      "curly brace and indent one tab less every time you close a curly brace." +
-                                      "This line should be indented more. Use the Indenter Tool", None, line)
-                else:  # indent is 1
-                    self.report_error(self.line_number,
-                                      "Incorrect Indentation", "TA Note: This line is overindented. " +
-                                      "You should indent your program one tab further every time you open a" +
-                                      "curly brace and indent one tab less every time you close a curly brace." +
-                                      "This line should be indented less. Use the Indenter Tool", None, line)
-
-            if '{' in line:
-                self.indent_level += 1
+            self.handle_indentation(line)
 
             if not self.single_comment and not self.multi_comment:
                 self.display_results(line, mode)
@@ -688,7 +678,17 @@ class CodeQualityChecker:
     def __init__(self, *args, **kwargs):
         self.checker_class = CSE142Checker
         self.verbose = kwargs.pop('verbose', False)
-        self.tab_size = kwargs.pop('tabsize', 4)
+        self.tab_size = 4
+        self.indent_type = 'spaces'
+        tabsize = kwargs.pop('tabsize', None)
+        if tabsize:
+            split = tabsize.split()
+            if len(split) != 2:
+                sys.exit(
+                    'Specify tabsize in the format: "indentsize spaces" or "indentsize tabs"')
+                self.tab_size = int(split[0])
+                self.indent_type = split[1]
+
         self.max_line_length = kwargs.pop('max_line_length', 100)
         self.mode = kwargs.pop('mode', 'visible')
         self.report = GenerateReport(verbose=self.verbose, mode=self.mode)
@@ -703,7 +703,8 @@ class CodeQualityChecker:
         self.options = {
             "MAX_LINE_LENGTH": self.max_line_length,
             "TAB_SIZE": self.tab_size,
-            "VERBOSE": self.verbose
+            "VERBOSE": self.verbose,
+            "INDENT_TYPE": self.indent_type
         }
 
     def run_tests(self, filename, expected=None):
@@ -894,7 +895,7 @@ BANK = {
     'an empty String with System.out.println("") is considered bad style; it makes\n' +
     'the intention less clear.',
 
-    'Bad boolean zen ( == true) ': 'You should never test booleans for equality, \n' +
+    'Bad boolean zen ( == true)': 'You should never test booleans for equality, \n' +
     'you should just use x itself as a condition',
 
     'Bad boolean zen ( == false)': 'You should never test booleans for equality, \n' +
@@ -988,6 +989,17 @@ BANK = {
     'Non-Descriptive variable name': 'This name is not descriptive. It\'s best practice\n' +
     'to have all identifier names specify what they do',
 
+    'Under Indentation': 'This line is underindented.\n' +
+    'You should indent your program one tab further every time you open a\n' +
+    'curly brace and indent one tab less every time you close a curly brace.\n' +
+    'This line should be indented more. Use the Indenter tool to indent your code automatically',
+
+    'Over Indentation': 'This line is overindented.\n' +
+    'You should indent your program one tab further every time you open a\n' +
+    'curly brace and indent one tab less every time you close a curly brace.\n' +
+    'This line should be indented less. Use the Indenter tool to indent your code automatically',
+
+    'Blank Lines Between Methods': 'You should have blank lines between methods. They help improve readability and structure'
 }
 
 
@@ -1022,7 +1034,6 @@ def main(filename, mode, verbose, debug, tabsize):
         mode=mode, verbose=verbose, debug=debug, tabsize=tabsize)
     tests = checker.run_tests(filename)
     if mode == 'web':
-        console.print(tests)
         return tests
     else:
         console.print(tests)
@@ -1030,4 +1041,4 @@ def main(filename, mode, verbose, debug, tabsize):
 
 if __name__ == '__main__':
     main(filename=sys.argv[1], mode=sys.argv[2],
-         verbose=bool(sys.argv[3]), debug=bool(sys.argv[4]), tabsize=int(sys.argv[5]))
+         verbose=bool(sys.argv[3]), debug=bool(sys.argv[4]), tabsize=None)
